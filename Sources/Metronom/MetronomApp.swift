@@ -83,7 +83,7 @@ final class Metronome: ObservableObject {
         subdivisions = min(4, max(1, defaults.integer(forKey: "subdivisions")))
         sound = min(ClickVoice.allCases.count - 1, max(0, defaults.integer(forKey: "sound")))
         volume = min(1, max(0, defaults.double(forKey: "volume")))
-        theme = InstrumentTheme(rawValue: defaults.string(forKey: "theme") ?? "") ?? .charcoal
+        theme = InstrumentTheme.restored(defaults.string(forKey: "theme"))
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: format)
         player.volume = Float(volume)
@@ -161,54 +161,108 @@ final class Metronome: ObservableObject {
 }
 
 enum InstrumentTheme: String, CaseIterable {
-    case charcoal, midnight, forest, burgundy, white
+    case charcoal, dracula, nord, gruvbox, githubLight
     var name: String {
         switch self {
         case .charcoal: return "Charcoal"
-        case .midnight: return "Midnight"
-        case .forest: return "Forest"
-        case .burgundy: return "Burgundy"
-        case .white: return "White"
+        case .dracula: return "Dracula"
+        case .nord: return "Nord"
+        case .gruvbox: return "Gruvbox"
+        case .githubLight: return "GitHub Light"
         }
     }
-    var isLight: Bool { self == .white }
+    static func restored(_ value: String?) -> InstrumentTheme {
+        if let value, let theme = InstrumentTheme(rawValue: value) { return theme }
+        // Migrate preferences from the first, generic palette set.
+        switch value {
+        case "midnight": return .nord
+        case "forest": return .gruvbox
+        case "burgundy": return .dracula
+        case "white": return .githubLight
+        default: return .charcoal
+        }
+    }
+    var isLight: Bool { self == .githubLight }
     var colorScheme: ColorScheme { isLight ? .light : .dark }
     var palette: InstrumentPalette { InstrumentPalette(theme: self) }
 }
 
 struct InstrumentPalette {
     let theme: InstrumentTheme
+    private func color(_ hex: UInt32) -> Color {
+        Color(red: Double((hex >> 16) & 255) / 255,
+              green: Double((hex >> 8) & 255) / 255,
+              blue: Double(hex & 255) / 255)
+    }
     var ink: Color {
         switch theme {
         case .charcoal: return Color(red: 0.055, green: 0.063, blue: 0.067)
-        case .midnight: return Color(red: 0.045, green: 0.075, blue: 0.13)
-        case .forest: return Color(red: 0.045, green: 0.10, blue: 0.075)
-        case .burgundy: return Color(red: 0.13, green: 0.045, blue: 0.07)
-        case .white: return Color(red: 0.89, green: 0.90, blue: 0.91)
+        case .dracula: return color(0x282A36)
+        case .nord: return color(0x2E3440)
+        case .gruvbox: return color(0x282828)
+        case .githubLight: return color(0xEAEEF2)
         }
     }
     var panel: Color {
         switch theme {
         case .charcoal: return Color(red: 0.105, green: 0.117, blue: 0.122)
-        case .midnight: return Color(red: 0.11, green: 0.17, blue: 0.26)
-        case .forest: return Color(red: 0.11, green: 0.19, blue: 0.145)
-        case .burgundy: return Color(red: 0.24, green: 0.10, blue: 0.135)
-        case .white: return Color(red: 0.99, green: 0.985, blue: 0.975)
+        case .dracula: return color(0x383349)
+        case .nord: return color(0x3B4A60)
+        case .gruvbox: return color(0x504231)
+        case .githubLight: return color(0xFFFFFF)
         }
     }
-    var foreground: Color { theme.isLight ? Color(white: 0.12) : .white }
-    var muted: Color {
-        theme.isLight ? Color(red: 0.32, green: 0.35, blue: 0.36)
-            : (theme == .charcoal ? Color(red: 0.52, green: 0.56, blue: 0.56)
-                : Color(red: 0.58, green: 0.62, blue: 0.62))
+    var accent: Color {
+        switch theme {
+        case .charcoal: return Finish.orange
+        case .dracula: return color(0xBD93F9)
+        case .nord: return color(0x88C0D0)
+        case .gruvbox: return color(0xFABD2F)
+        case .githubLight: return color(0x0969DA)
+        }
     }
-    var controlTop: Color { theme.isLight ? .white : Color(white: 0.23) }
-    var controlBottom: Color { theme.isLight ? Color(white: 0.86) : Color(white: 0.16) }
-    var recess: Color { theme.isLight ? .black.opacity(0.055) : ink.opacity(0.65) }
+    var foreground: Color {
+        switch theme {
+        case .charcoal: return .white
+        case .dracula: return color(0xF8F8F2)
+        case .nord: return color(0xECEFF4)
+        case .gruvbox: return color(0xEBDBB2)
+        case .githubLight: return color(0x24292F)
+        }
+    }
+    var muted: Color {
+        switch theme {
+        case .charcoal: return Color(red: 0.52, green: 0.56, blue: 0.56)
+        case .dracula: return color(0xC1B7D8)
+        case .nord: return color(0xC1D1E4)
+        case .gruvbox: return color(0xD5C4A1)
+        case .githubLight: return color(0x57606A)
+        }
+    }
+    var controlTop: Color {
+        switch theme {
+        case .charcoal: return Color(white: 0.23)
+        case .dracula: return color(0x62517D)
+        case .nord: return color(0x4C6A80)
+        case .gruvbox: return color(0x70562C)
+        case .githubLight: return color(0xFFFFFF)
+        }
+    }
+    var controlBottom: Color {
+        switch theme {
+        case .charcoal: return Color(white: 0.16)
+        case .dracula: return color(0x443A5B)
+        case .nord: return color(0x354B61)
+        case .gruvbox: return color(0x4A3B2C)
+        case .githubLight: return color(0xDDEBFC)
+        }
+    }
+    var recess: Color { theme.isLight ? color(0xF6F8FA) : ink.opacity(theme == .charcoal ? 0.65 : 0.8) }
     var border: Color { theme.isLight ? .black : .white }
-    var sliderTint: Color { theme.isLight ? Color(red: 0.29, green: 0.40, blue: 0.28) : Finish.lcd }
-    var dialTop: Color { theme.isLight ? Color(white: 0.99) : Color(white: 0.29) }
-    var dialBottom: Color { theme.isLight ? Color(white: 0.72) : Color(white: 0.15) }
+    var fieldBorder: Color { theme == .charcoal ? border.opacity(0.06) : accent.opacity(0.32) }
+    var sliderTint: Color { theme == .charcoal ? Finish.lcd : accent }
+    var dialTop: Color { theme == .charcoal ? Color(white: 0.29) : controlTop }
+    var dialBottom: Color { theme == .charcoal ? Color(white: 0.15) : controlBottom }
 }
 
 private struct InstrumentThemeKey: EnvironmentKey {
@@ -235,7 +289,7 @@ struct InstrumentButtonStyle: ButtonStyle {
     var radius: CGFloat = 10
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundColor(accent ? Color.white : palette.foreground.opacity(0.87))
+            .foregroundColor(accent ? Color.white : palette.foreground.opacity(theme == .charcoal ? 0.87 : 1))
             .background(
                 LinearGradient(
                     colors: accent
@@ -246,7 +300,7 @@ struct InstrumentButtonStyle: ButtonStyle {
                 in: RoundedRectangle(cornerRadius: radius)
             )
             .overlay(RoundedRectangle(cornerRadius: radius)
-                .strokeBorder(palette.border.opacity(configuration.isPressed ? 0.05 : 0.10), lineWidth: 1))
+                .strokeBorder(theme == .charcoal ? palette.border.opacity(configuration.isPressed ? 0.05 : 0.10) : palette.accent.opacity(configuration.isPressed ? 0.15 : 0.4), lineWidth: 1))
             .shadow(color: .black.opacity(configuration.isPressed ? 0 : 0.3), radius: 2, y: 2)
             .brightness(configuration.isPressed ? -0.08 : 0)
             .offset(y: configuration.isPressed ? 1 : 0)
@@ -392,45 +446,109 @@ struct HardwareLCD: View {
     }
 }
 
-struct SettingMenu: View {
+struct DropdownChoice {
+    let id: String
+    let label: String
+}
+
+// A SwiftUI button renders the complete label. AppKit supplies only the popup
+// menu, avoiding macOS Menu styles reducing a custom label to its first Text.
+@MainActor
+struct ChoiceDropdown: View {
     @Environment(\.instrumentTheme) private var theme
+    @StateObject private var presenter = ChoiceMenuPresenter()
+    let title: String
+    let selectedID: String
+    let selectedLabel: String
+    let options: [DropdownChoice]
+    let onSelect: (String) -> Void
     private var palette: InstrumentPalette { theme.palette }
+    var body: some View {
+        Button {
+            presenter.show(options: options, selectedID: selectedID, onSelect: onSelect)
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 8, weight: .semibold)).tracking(1)
+                    .foregroundColor(theme == .charcoal ? palette.muted : palette.accent)
+                HStack(spacing: 6) {
+                    Text(selectedLabel)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(palette.foreground.opacity(0.92))
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundColor(theme == .charcoal ? palette.muted : palette.accent)
+                }
+            }
+            .padding(.horizontal, 11)
+            .frame(maxWidth: .infinity, minHeight: 48, maxHeight: 48, alignment: .leading)
+            .background(palette.recess, in: RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(palette.fieldBorder))
+            .contentShape(RoundedRectangle(cornerRadius: 9))
+        }
+        .buttonStyle(.plain)
+        .background(ChoiceMenuAnchor(presenter: presenter))
+        .accessibilityLabel(title)
+        .accessibilityValue(selectedLabel)
+    }
+}
+
+@MainActor
+final class ChoiceMenuPresenter: NSObject, ObservableObject {
+    weak var anchor: NSView?
+    private var selection: ((String) -> Void)?
+    func show(options: [DropdownChoice], selectedID: String, onSelect: @escaping (String) -> Void) {
+        guard let anchor, anchor.window != nil else { return }
+        let menu = NSMenu()
+        menu.minimumWidth = anchor.bounds.width
+        for option in options {
+            let item = NSMenuItem(title: option.label, action: #selector(choose(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = option.id
+            item.state = option.id == selectedID ? .on : .off
+            menu.addItem(item)
+        }
+        selection = onSelect
+        let y = anchor.isFlipped ? anchor.bounds.maxY + 4 : anchor.bounds.minY - 4
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: y), in: anchor)
+        selection = nil
+    }
+    @objc private func choose(_ item: NSMenuItem) {
+        if let id = item.representedObject as? String { selection?(id) }
+    }
+}
+
+@MainActor
+struct ChoiceMenuAnchor: NSViewRepresentable {
+    let presenter: ChoiceMenuPresenter
+    func makeNSView(context: Context) -> ChoiceAnchorView {
+        let view = ChoiceAnchorView()
+        presenter.anchor = view
+        return view
+    }
+    func updateNSView(_ nsView: ChoiceAnchorView, context: Context) { presenter.anchor = nsView }
+}
+
+@MainActor
+final class ChoiceAnchorView: NSView {
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+}
+
+@MainActor
+struct SettingMenu: View {
     let title: String
     @Binding var value: Int
     let values: [Int]
     var body: some View {
-        Menu {
-            ForEach(values, id: \.self) { number in
-                Button {
-                    value = number
-                } label: {
-                    if value == number {
-                        Label(number == 0 ? "No accent" : "\(number)", systemImage: "checkmark")
-                    } else {
-                        Text(number == 0 ? "No accent" : "\(number)")
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Text(title).font(.system(size: 9, weight: .semibold)).tracking(1)
-                    .foregroundColor(palette.muted)
-                Spacer(minLength: 0)
-                Text(value == 0 ? "—" : "\(value)")
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .foregroundColor(palette.foreground.opacity(0.86))
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .bold)).foregroundColor(palette.muted)
-            }
-            .padding(.horizontal, 12).frame(height: 38)
-            .background(palette.recess, in: RoundedRectangle(cornerRadius: 9))
-            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(palette.border.opacity(0.06)))
+        ChoiceDropdown(
+            title: title, selectedID: String(value),
+            selectedLabel: value == 0 ? "No accent" : "\(value)",
+            options: values.map { DropdownChoice(id: String($0), label: $0 == 0 ? "No accent" : "\($0)") }
+        ) { id in
+            if let number = Int(id) { value = number }
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize(horizontal: false, vertical: true)
-        .accessibilityLabel(title)
-        .accessibilityValue(value == 0 ? "No accent" : "\(value)")
     }
 }
 
@@ -445,7 +563,7 @@ struct InstrumentView: View {
             HStack {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("fdm-3").font(.system(size: 18, weight: .bold, design: .rounded))
-                        .tracking(-0.5).foregroundColor(palette.foreground.opacity(0.92))
+                        .tracking(-0.5).foregroundColor(model.theme == .charcoal ? palette.foreground.opacity(0.92) : palette.accent)
                     Text("METRONOME").font(.system(size: 8, weight: .medium))
                         .tracking(1.8).foregroundColor(palette.muted)
                 }
@@ -475,7 +593,7 @@ struct InstrumentView: View {
                         .frame(width: 68, height: 68)
                         .overlay(Circle().strokeBorder(palette.border.opacity(0.14)))
                         .shadow(color: .black.opacity(0.5), radius: 3, y: 3)
-                    Capsule().fill(Finish.orange).frame(width: 3, height: 12)
+                    Capsule().fill(palette.accent).frame(width: 3, height: 12)
                         .offset(y: -23)
                         .rotationEffect(.degrees(-135 + Double(model.bpm - 30) / 222 * 270))
                 }
@@ -513,8 +631,10 @@ struct InstrumentView: View {
                     SettingMenu(title: "BEATS", value: $model.beats, values: Array(0...9))
                     SettingMenu(title: "DIVISION", value: $model.subdivisions, values: Array(1...4))
                 }
-                soundSelector
-                themeSelector
+                HStack(spacing: 8) {
+                    soundSelector
+                    themeSelector
+                }
                 HStack(spacing: 10) {
                     Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
                         .font(.system(size: 12)).foregroundColor(palette.muted).frame(width: 18)
@@ -537,77 +657,23 @@ struct InstrumentView: View {
     }
 
     private var soundSelector: some View {
-        Menu {
-            ForEach(ClickVoice.allCases, id: \.rawValue) { voice in
-                Button {
-                    model.sound = voice.rawValue
-                } label: {
-                    if model.sound == voice.rawValue {
-                        Label(voice.name, systemImage: "checkmark")
-                    } else {
-                        Text(voice.name)
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Text("SOUND")
-                    .font(.system(size: 9, weight: .semibold)).tracking(1)
-                    .foregroundColor(palette.muted)
-                Spacer(minLength: 0)
-                Text((ClickVoice(rawValue: model.sound) ?? .click).name)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(palette.foreground.opacity(0.86))
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(palette.muted)
-            }
-            .padding(.horizontal, 12).frame(height: 38)
-            .background(palette.recess, in: RoundedRectangle(cornerRadius: 9))
-            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(palette.border.opacity(0.06)))
+        ChoiceDropdown(
+            title: "SOUND", selectedID: String(model.sound),
+            selectedLabel: (ClickVoice(rawValue: model.sound) ?? .click).name,
+            options: ClickVoice.allCases.map { DropdownChoice(id: String($0.rawValue), label: $0.name) }
+        ) { id in
+            if let sound = Int(id) { model.sound = sound }
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize(horizontal: false, vertical: true)
-        .accessibilityLabel("Sound")
-        .accessibilityValue((ClickVoice(rawValue: model.sound) ?? .click).name)
     }
 
     private var themeSelector: some View {
-        Menu {
-            ForEach(InstrumentTheme.allCases, id: \.rawValue) { option in
-                Button {
-                    model.theme = option
-                } label: {
-                    if model.theme == option {
-                        Label(option.name, systemImage: "checkmark")
-                    } else {
-                        Text(option.name)
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Text("THEME")
-                    .font(.system(size: 9, weight: .semibold)).tracking(1)
-                    .foregroundColor(palette.muted)
-                Spacer(minLength: 0)
-                Text(model.theme.name)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(palette.foreground.opacity(0.86))
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(palette.muted)
-            }
-            .padding(.horizontal, 12).frame(height: 38)
-            .background(palette.recess, in: RoundedRectangle(cornerRadius: 9))
-            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(palette.border.opacity(0.06)))
+        ChoiceDropdown(
+            title: "THEME", selectedID: model.theme.rawValue,
+            selectedLabel: model.theme.name,
+            options: InstrumentTheme.allCases.map { DropdownChoice(id: $0.rawValue, label: $0.name) }
+        ) { id in
+            if let theme = InstrumentTheme(rawValue: id) { model.theme = theme }
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize(horizontal: false, vertical: true)
-        .accessibilityLabel("Theme")
-        .accessibilityValue(model.theme.name)
     }
 
     private func beatButton(_ symbol: String, delta: Int) -> some View {
@@ -615,11 +681,8 @@ struct InstrumentView: View {
         return Button {
             model.beats = min(9, max(0, model.beats + delta))
         } label: {
-            VStack(spacing: 3) {
-                Image(systemName: symbol).font(.system(size: 13, weight: .medium))
-                Text("BEAT").font(.system(size: 8, weight: .semibold)).tracking(0.6)
-            }
-            .frame(width: 44, height: 42)
+            Image(systemName: symbol).font(.system(size: 14, weight: .medium))
+                .frame(width: 44, height: 38)
         }
         .buttonStyle(InstrumentButtonStyle(radius: 12))
         .disabled(atLimit)
