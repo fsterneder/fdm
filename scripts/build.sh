@@ -11,21 +11,21 @@ if ! xcrun --find swift >/dev/null 2>&1; then
 fi
 swift build -c release
 bin_dir="$(swift build -c release --show-bin-path)"
-app="dist/fdm-3.app"
+app="dist/fdm.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-cp "$bin_dir/fdm-3" "$app/Contents/MacOS/fdm-3"
+cp "$bin_dir/fdm" "$app/Contents/MacOS/fdm"
 cat > "$app/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>CFBundleExecutable</key><string>fdm-3</string>
+<key>CFBundleExecutable</key><string>fdm</string>
 <key>CFBundleIdentifier</key><string>app.metronom.desktop</string>
-<key>CFBundleName</key><string>fdm-3</string>
-<key>CFBundleDisplayName</key><string>fdm-3</string>
+<key>CFBundleName</key><string>fdm</string>
+<key>CFBundleDisplayName</key><string>fdm</string>
 <key>CFBundleIconFile</key><string>AppIcon.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.12.0</string>
-<key>CFBundleVersion</key><string>23</string>
+<key>CFBundleShortVersionString</key><string>0.13.0</string>
+<key>CFBundleVersion</key><string>24</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
@@ -42,6 +42,6 @@ registrar="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchSe
 if [[ -x "$registrar" ]]; then
   "$registrar" -f "$app" || echo "Launch Services will refresh the icon when the app is opened." >&2
 fi
-ditto -c -k --sequesterRsrc --keepParent "$app" dist/fdm-3-0.12.0.zip
+ditto -c -k --sequesterRsrc --keepParent "$app" dist/fdm-0.13.0.zip
 echo "Built $PWD/$app"
-echo "Run it: open dist/fdm-3.app"
+echo "Run it: open dist/fdm.app"

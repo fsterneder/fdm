@@ -4,9 +4,9 @@ import TempoCore
 
 enum DisplayGeometry {
     static let width: CGFloat = 392
-    static let mainHeight: CGFloat = 184
+    static let mainHeight: CGFloat = 208
     static let widgetWidth: CGFloat = 244
-    static let widgetHeight: CGFloat = 52
+    static let widgetHeight: CGFloat = 40
 }
 
 @MainActor
@@ -28,17 +28,17 @@ struct ModernReadout: View {
             VStack(spacing: 28 * scale) {
                 HStack(spacing: 0) {
                     VStack(spacing: 2 * scale) {
-                        TempoValue(model: model, fontSize: 68 * scale, width: 196 * scale, height: 84 * scale)
+                        TempoValue(model: model, fontSize: 76 * scale, width: 196 * scale, height: 94 * scale)
                         caption("BPM", scale: scale)
                     }
                     .frame(width: 196 * scale)
                     VStack(spacing: 2 * scale) {
                         Text(model.inSilentBar ? "\(model.gapBarsRemaining)/\(model.gapBars)" : subdivisionText)
-                            .font(.system(size: (model.inSilentBar ? 48 : 54) * scale, weight: .regular))
+                            .font(.system(size: (model.inSilentBar ? 54 : 60) * scale, weight: .regular))
                             .monospacedDigit()
                             .foregroundColor(model.inSilentBar ? palette.neutral : palette.beat)
                             .minimumScaleFactor(0.6).lineLimit(1)
-                            .frame(width: 188 * scale, height: 84 * scale)
+                            .frame(width: 188 * scale, height: 94 * scale)
                         caption(model.inSilentBar ? "SILENT BARS" : "SUBDIVISION", scale: scale)
                     }
                     .frame(width: 196 * scale)
@@ -47,7 +47,7 @@ struct ModernReadout: View {
                             onSet: { value in
                                 if model.subdivisions != value { model.subdivisions = value }
                             }, onDoubleClick: nil, onDragState: { model.editingTempo = $0 })
-                            .frame(width: 196 * scale, height: 100 * scale)
+                            .frame(width: 196 * scale, height: 112 * scale)
                             .accessibilityHidden(true)
                     }
                     .help("Drag up/down to change subdivision.")
@@ -55,9 +55,9 @@ struct ModernReadout: View {
                     .accessibilityLabel(model.inSilentBar ? "Silent bars remaining" : "Subdivision")
                     .accessibilityValue(model.inSilentBar ? "\(model.gapBarsRemaining) of \(model.gapBars) bars remaining" : "\(model.subdivisions) clicks per beat")
                 }
-                .frame(height: 100 * scale)
-                BeatLights(model: model, width: DisplayGeometry.width * scale, maxDiameter: 56 * scale, spacing: 24 * scale)
-                    .frame(height: 56 * scale)
+                .frame(height: 112 * scale)
+                BeatLights(model: model, width: DisplayGeometry.width * scale, maxDiameter: 68 * scale, spacing: 24 * scale)
+                    .frame(height: 68 * scale)
 
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .center)
@@ -66,7 +66,7 @@ struct ModernReadout: View {
     private func caption(_ title: String, scale: CGFloat) -> some View {
         Text(title).font(.system(size: 10 * scale, weight: .medium))
             .tracking(1.4 * scale).foregroundColor(palette.neutral.opacity(0.65))
-            .lineLimit(1).frame(height: 14 * scale)
+            .lineLimit(1).frame(height: 16 * scale)
     }
 }
 
@@ -128,6 +128,7 @@ private struct BeatLights: View {
     let width: CGFloat
     let maxDiameter: CGFloat
     let spacing: CGFloat
+    var outlineOpacity: Double = 1
     var body: some View {
         let count = max(1, model.beats)
         let playing = model.playing
@@ -149,7 +150,7 @@ private struct BeatLights: View {
                     let color = isAccented ? palette.action : (isCurrent ? palette.playingBeat : palette.neutral)
                     Circle()
                         .fill(isCurrent || isPlayed ? color : Color.clear)
-                        .overlay(Circle().strokeBorder(color, lineWidth: min(2.5, max(1.25, diameter * 0.04))))
+                        .overlay(Circle().strokeBorder(color.opacity(isCurrent || isPlayed ? 1 : outlineOpacity), lineWidth: min(2.5, max(1.25, diameter * 0.04))))
                         .frame(width: diameter, height: diameter)
                         .accessibilityLabel("\(isAccented ? "Accented beat" : "Beat") \(index + 1) of \(count)")
                         .accessibilityValue(isCurrent ? "Current" : (isPlayed ? "Played" : "Upcoming"))
@@ -165,25 +166,24 @@ private struct BeatLights: View {
 struct CompactReadout: View {
     @ObservedObject var model: Metronome
     var body: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 3) {
+        let beatWidth: CGFloat = model.bpm >= 100 ? 100 : 104
+        return HStack(spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(String(model.bpm))
-                    .font(.system(size: 24, weight: .semibold)).monospacedDigit()
+                    .font(.system(size: 26, weight: .semibold)).monospacedDigit()
                     .foregroundColor(model.theme.palette.tempo)
-                    .frame(width: 52, height: 32)
                     .accessibilityLabel("Tempo")
                     .accessibilityValue("\(model.bpm) beats per minute")
-                Text("bpm").font(.system(size: 9, weight: .medium))
+                Text("bpm").font(.system(size: 9.5, weight: .medium))
                     .foregroundColor(model.theme.palette.neutral.opacity(0.65))
-                    .frame(width: 21).offset(y: 5)
                     .accessibilityHidden(true)
             }
-            .frame(width: 76, height: 32)
-            BeatLights(model: model, width: 104, maxDiameter: 20, spacing: 5)
-                .frame(width: 104, height: 32)
-
+            .fixedSize(horizontal: true, vertical: false)
+            BeatLights(model: model, width: beatWidth, maxDiameter: 20, spacing: 5, outlineOpacity: 0.8)
+                .frame(width: beatWidth, height: 32)
         }
-        .frame(width: 188, height: 32)
+        .padding(.leading, 8)
+        .frame(width: 188, height: 32, alignment: .leading)
     }
 }
 

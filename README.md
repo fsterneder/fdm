@@ -1,8 +1,10 @@
-# fdm-3
+# fdm
 
 A compact macOS metronome with round beat lights, tap tempo, subdivisions, gap practice, five sounds, and IDE/Vim themes.
 
-<img src="docs/images/fdm-3.svg" alt="Dracula interface preview" width="352">
+<img src="docs/images/fdm.svg" alt="Dracula interface preview" width="396">
+
+<img src="docs/images/widget.svg" alt="Compact widget preview" width="244">
 
 ## Build and run
 
@@ -11,19 +13,19 @@ Requires macOS 13+ and Apple Command Line Tools with Swift 5.9+. Full Xcode is o
 ```sh
 xcode-select --install
 bash scripts/build.sh
-open dist/fdm-3.app
+open dist/fdm.app
 ```
 
 ## Controls
 
 - **BPM / subdivision:** drag up/down. Double-click BPM for optional numeric entry.
-- **Bottom row:** Tap, Settings, Mute, and Start/Stop. The upper-right arrows open the widget.
+- **Right column:** Widget, Settings, Tap, Mute, and Start/Stop.
 - **Settings:** Beats (1–9), Accent, Gap, Gap Length (1–8 bars), Sound, Theme, and volume.
 - **Space:** Start/Stop. **T:** tap. **M:** mute.
 - **↑/↓:** tempo ±1. **←/→:** tempo ±10. **Shift + ↑/↓:** beats.
 - **Tab or &#92;:** switch to the floating widget.
 
-Completed beats stay filled. With Accent enabled, the first indicator uses the Play accent; other active beats use the current-beat color. The widget shows read-only BPM and beat progress.
+Completed beats stay filled. With Accent enabled, the first indicator uses the Play accent; other active beats use the current-beat color. The slim widget shows read-only BPM and beat progress, with a flat expand control.
 
 ## Gap practice
 

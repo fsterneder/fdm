@@ -11,7 +11,7 @@ struct MetronomApp: App {
     @StateObject private var model = Metronome()
     @StateObject private var windows = WindowModes()
     var body: some Scene {
-        WindowGroup("fdm-3") {
+        WindowGroup("fdm") {
             InstrumentView(model: model, showWidget: { windows.showWidget() })
                 .background(WindowBridge(windows: windows, model: model))
                 .environment(\.instrumentTheme, model.theme)
@@ -585,26 +585,14 @@ struct InstrumentView: View {
     @State private var showingSettings = false
     private var palette: InstrumentPalette { model.theme.palette }
     var body: some View {
-        VStack(spacing: 28) {
-            ModernReadout(model: model).frame(height: DisplayGeometry.mainHeight)
+        HStack(alignment: .center, spacing: 20) {
+            ModernReadout(model: model)
+                .frame(width: DisplayGeometry.width, height: DisplayGeometry.mainHeight)
             controls
         }
-        .padding(.horizontal, 24).padding(.top, 8).padding(.bottom, 20)
-        .frame(width: 440)
+        .padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 24)
         .background(palette.background)
         .preferredColorScheme(model.theme.colorScheme)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: showWidget) {
-                    Image(systemName: "arrow.down.right.and.arrow.up.left")
-                        .font(.system(size: 14)).frame(width: 28, height: 28)
-                }
-                .buttonStyle(.plain).foregroundColor(palette.neutral)
-                .help("Widget mode (Tab or \\)").accessibilityLabel("Enter widget mode")
-            }
-        }
-        .toolbarBackground(palette.background, for: .windowToolbar)
-        .toolbarBackground(.visible, for: .windowToolbar)
         .alert("Audio unavailable", isPresented: Binding(
             get: { model.error != nil }, set: { if !$0 { model.error = nil } }
         )) {
@@ -612,27 +600,34 @@ struct InstrumentView: View {
         } message: { Text(model.error ?? "") }
     }
     private var controls: some View {
-        HStack(spacing: 0) {
-            Button { model.tap() } label: {
-                Text("TAP").font(.system(size: 11, weight: .semibold))
-                    .frame(width: DisplayGeometry.width / 4, height: 32).contentShape(Rectangle())
+        VStack(spacing: 12) {
+            Button(action: showWidget) {
+                Image(systemName: "arrow.down.right.and.arrow.up.left")
+                    .font(.system(size: 14)).frame(width: 36, height: 32)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain).foregroundColor(palette.neutral)
-            .help("Tap tempo (T)").accessibilityLabel("Tap tempo")
+            .help("Widget mode (Tab or \\)").accessibilityLabel("Enter widget mode")
             Button { showingSettings.toggle() } label: {
                 Image(systemName: "gearshape").font(.system(size: 17))
-                    .frame(width: DisplayGeometry.width / 4, height: 32).contentShape(Rectangle())
+                    .frame(width: 36, height: 32).contentShape(Rectangle())
             }
             .buttonStyle(.plain).foregroundColor(palette.neutral)
             .help("Settings").accessibilityLabel("Settings")
-            .popover(isPresented: $showingSettings, arrowEdge: .top) {
+            .popover(isPresented: $showingSettings, arrowEdge: .leading) {
                 InstrumentSettings(model: model)
                     .environment(\.instrumentTheme, model.theme)
                     .preferredColorScheme(model.theme.colorScheme)
             }
+            Button { model.tap() } label: {
+                Text("TAP").font(.system(size: 11, weight: .semibold))
+                    .frame(width: 36, height: 32).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain).foregroundColor(palette.neutral)
+            .help("Tap tempo (T)").accessibilityLabel("Tap tempo")
             Button { model.toggleMute() } label: {
                 Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
-                    .font(.system(size: 17)).frame(width: DisplayGeometry.width / 4, height: 32)
+                    .font(.system(size: 17)).frame(width: 36, height: 32)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain).foregroundColor(palette.neutral)
@@ -641,13 +636,13 @@ struct InstrumentView: View {
             Button { model.toggle() } label: {
                 Image(systemName: model.playing ? "stop.fill" : "play.fill")
                     .font(.system(size: 18, weight: .medium))
-                    .frame(width: DisplayGeometry.width / 4, height: 32).contentShape(Rectangle())
+                    .frame(width: 36, height: 32).contentShape(Rectangle())
             }
             .buttonStyle(.plain).foregroundColor(palette.action)
             .help("Start / Stop (Space)")
             .accessibilityLabel(model.playing ? "Stop metronome" : "Start metronome")
         }
-        .frame(height: 32)
+        .frame(width: 36, height: 208)
     }
 }
 
@@ -856,7 +851,7 @@ final class WindowModes: ObservableObject {
                 contentRect: NSRect(x: 0, y: 0, width: DisplayGeometry.widgetWidth, height: DisplayGeometry.widgetHeight),
                 styleMask: [.borderless], backing: .buffered, defer: false
             )
-            panel.title = "fdm-3 Tempo"
+            panel.title = "fdm Tempo"
             panel.level = .floating
             panel.hidesOnDeactivate = false
             panel.isMovableByWindowBackground = true
@@ -903,12 +898,13 @@ struct TempoWidget: View {
             CompactReadout(model: model)
             Button(action: showInstrument) {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(InstrumentButtonStyle(radius: 8))
-            .help("Return to fdm-3 (Tab or \\)")
-            .accessibilityLabel("Return to full fdm-3 window")
+            .buttonStyle(.plain).foregroundColor(palette.neutral.opacity(0.8))
+            .help("Return to fdm (Tab or \\)")
+            .accessibilityLabel("Return to full fdm window")
         }
         .padding(.horizontal, 10).frame(width: DisplayGeometry.widgetWidth, height: DisplayGeometry.widgetHeight)
         .background(LinearGradient(colors: palette.bodyColors,
@@ -919,14 +915,14 @@ struct TempoWidget: View {
             Button(model.playing ? "Stop" : "Start") { model.toggle() }
             Button("Tap Tempo") { model.tap() }
             Divider()
-            Button("Show Full fdm-3") { showInstrument() }
+            Button("Show Full fdm") { showInstrument() }
                 .keyboardShortcut(.tab, modifiers: [])
                     .disabled(model.editingTempo)
             Divider()
-            Button("Quit fdm-3") { model.stop(); NSApp.terminate(nil) }
+            Button("Quit fdm") { model.stop(); NSApp.terminate(nil) }
         }
         .environment(\.instrumentTheme, model.theme)
-        .help("Drag the background to move. Click expand to return to fdm-3.")
+        .help("Drag the background to move. Click expand to return to fdm.")
         .preferredColorScheme(model.theme.colorScheme)
     }
 }
@@ -934,13 +930,18 @@ struct TempoWidget: View {
 @MainActor
 struct WindowBridge: NSViewRepresentable {
     let windows: WindowModes
-    let model: Metronome
+    @ObservedObject var model: Metronome
     func makeNSView(context: Context) -> WindowAttachment {
         let view = WindowAttachment()
-        view.onWindow = { window in windows.attach(window: window, model: model) }
+        view.onWindow = { window in
+            window.backgroundColor = NSColor(model.theme.palette.background)
+            windows.attach(window: window, model: model)
+        }
         return view
     }
-    func updateNSView(_ nsView: WindowAttachment, context: Context) {}
+    func updateNSView(_ nsView: WindowAttachment, context: Context) {
+        nsView.window?.backgroundColor = NSColor(model.theme.palette.background)
+    }
 }
 
 @MainActor

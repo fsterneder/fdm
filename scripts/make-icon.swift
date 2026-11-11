@@ -31,7 +31,7 @@ struct IconBuilder {
             try process.run()
             process.waitUntilExit()
             guard process.terminationStatus == 0 else {
-                throw NSError(domain: "fdm-3.Icon", code: Int(process.terminationStatus),
+                throw NSError(domain: "fdm.Icon", code: Int(process.terminationStatus),
                               userInfo: [NSLocalizedDescriptionKey: "\(executable) failed."])
             }
         }

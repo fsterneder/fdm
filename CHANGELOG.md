@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.0
+
+- Implement the approved balanced right-hand control column: Widget, Settings, Tap, Speaker, Play.
+- Center the metric and beat rows together and preserve the pre-enlargement mockup's proportions.
+- Slim the widget to 40 points, align the bpm unit to the number, tighten grouping, and use a flat expand control.
+- Keep widget BPM read-only and preserve accent coloring and bar-based gaps.
+- Rename the package, app, executable, archive, and cask to fdm while retaining the bundle identifier and saved settings.
+
 ## 0.12.0
 
 - Adopt the approved logo-free layout with larger metric values, spaced beat lights, and four flat bottom controls.
