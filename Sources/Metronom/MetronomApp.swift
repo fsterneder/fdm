@@ -625,14 +625,13 @@ struct TempoWidget: View {
             HardwareLCD(model: model, compact: true).frame(width: 140, height: 66)
             Spacer(minLength: 0)
             VStack(spacing: 6) {
-                Button { model.toggle() } label: {
-                    Image(systemName: model.playing ? "stop.fill" : "play.fill")
-                        .font(.system(size: 10, weight: .semibold))
-                        .frame(width: 28, height: 28)
-                }
-                .buttonStyle(InstrumentButtonStyle(accent: model.playing, radius: 8))
-                .help(model.playing ? "Stop (Space)" : "Start (Space)")
-                .accessibilityLabel(model.playing ? "Stop metronome" : "Start metronome")
+                Circle()
+                    .fill(model.playing ? Finish.transportRed : Color.white.opacity(0.18))
+                    .frame(width: 9, height: 9)
+                    .frame(width: 28, height: 28)
+                    .help(model.playing ? "Metronome is playing" : "Metronome is stopped")
+                    .accessibilityLabel("Playback status")
+                    .accessibilityValue(model.playing ? "Playing" : "Stopped")
 
                 Button(action: showInstrument) {
                     Image(systemName: "arrow.up.left.and.arrow.down.right")
