@@ -253,11 +253,24 @@ static void concurrentControls(void) {
     }
     destroy(h);
 }
+static void cappedMeter(void) {
+    FDMConfig c = config(); c.beats = 9;
+    Harness *h = create(c);
+    advance(h, 168001, true);
+    assert(h->eventCount == 8);
+    for (unsigned i = 0; i < h->eventCount; ++i) {
+        assert(h->events[i].config.beats == 7);
+        assert(h->events[i].beat == i % 7);
+        assert(h->events[i].number == i + 1);
+    }
+    destroy(h);
+}
 int main(void) {
     nextBeatAndBar(); finishCurrentSubdivision(); gapCountdown();
     editsDuringGap(); gapEditAtBar(); randomWholeBars();
     fractionalClock(); stalledUIAndRestart(); coalescedEdits(); concurrentControls(); barSequencePositions();
-    puts("Transport: 11 regression scenarios passed.");
+    cappedMeter();
+    puts("Transport: 12 regression scenarios passed.");
     return 0;
 }
 

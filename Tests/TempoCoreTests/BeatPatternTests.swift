@@ -2,6 +2,16 @@ import XCTest
 @testable import TempoCore
 
 final class BeatPatternTests: XCTestCase {
+    func testSavedLargerMetersClampWithoutChangingAccent() {
+        for saved in [8, 9, Int.max] {
+            for accent in [false, true] {
+                let pattern = BeatPattern(savedBeats: saved, savedAccent: accent)
+                XCTAssertEqual(pattern.beats, 7)
+                XCTAssertEqual(pattern.accent, accent)
+            }
+        }
+    }
+
     func testLegacyNoAccentMigratesToFourBeatsWithAccentOff() {
         for saved in [0, 1] {
             let pattern = BeatPattern(savedBeats: saved, savedAccent: nil)

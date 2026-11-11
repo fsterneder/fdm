@@ -3,7 +3,7 @@ import AppKit
 import TempoCore
 
 enum DisplayGeometry {
-    static let width: CGFloat = 468
+    static let width: CGFloat = 420
     static let mainHeight: CGFloat = 234
     static let mainBeatDiameter: CGFloat = 68
     static let mainBeatSpacing: CGFloat = 24

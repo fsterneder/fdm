@@ -30,7 +30,7 @@ struct MetronomApp: App {
                 Button("Slower by 10 BPM") { model.bpm -= 10 }.keyboardShortcut(.leftArrow, modifiers: []).disabled(model.editingTempo)
                 Button("Increase Beats") { model.adjustBeats(by: 1) }
                     .keyboardShortcut(.upArrow, modifiers: [.shift])
-                    .disabled(windows.isWidgetMode || model.editingTempo || model.beats == 9)
+                    .disabled(windows.isWidgetMode || model.editingTempo || model.beats >= BeatPattern.maximumBeats)
                 Button("Decrease Beats") { model.adjustBeats(by: -1) }
                     .keyboardShortcut(.downArrow, modifiers: [.shift])
                     .disabled(windows.isWidgetMode || model.editingTempo || model.beats == 1)
@@ -58,7 +58,7 @@ final class AppLifecycle: NSObject, NSApplicationDelegate {
 
 @MainActor
 final class Metronome: ObservableObject {
-    static let beatOptions = Array(1...9)
+    static let beatOptions = Array(1...BeatPattern.maximumBeats)
     @Published var bpm: Int { didSet {
         let bounded = Tempo.clamp(bpm)
         if bpm != bounded { bpm = bounded; return }
@@ -586,12 +586,12 @@ struct InstrumentView: View {
     @State private var showingSettings = false
     private var palette: InstrumentPalette { model.theme.palette }
     var body: some View {
-        HStack(alignment: .center, spacing: 20) {
+        HStack(alignment: .center, spacing: 16) {
             ModernReadout(model: model)
                 .frame(width: DisplayGeometry.width, height: DisplayGeometry.mainHeight)
             controls
         }
-        .padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 24)
+        .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 24)
         .background(palette.background)
         .preferredColorScheme(model.theme.colorScheme)
         .alert("Audio unavailable", isPresented: Binding(

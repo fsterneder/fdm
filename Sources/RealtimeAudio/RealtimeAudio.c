@@ -38,7 +38,7 @@ static uint32_t bound(uint32_t x, uint32_t lo, uint32_t hi) {
 }
 static FDMConfig sanitized(FDMConfig c) {
     c.bpm = bound(c.bpm, 30, 252);
-    c.beats = bound(c.beats, 1, 9);
+    c.beats = bound(c.beats, 1, 7);
     c.subdivisions = bound(c.subdivisions, 1, 4);
     c.voice = bound(c.voice, 0, VOICES - 1);
     c.gapBars = bound(c.gapBars, 1, 8);

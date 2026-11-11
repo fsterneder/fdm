@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.11
+
+- Reduce the main window’s width and horizontal control spacing while retaining the four-beat alignment and text sizes.
+- Limit the meter to 1–7 beats in settings, shortcuts, and audio playback.
+- Restore saved 8- or 9-beat meters as 7 while preserving Accent.
+
 ## 0.16.10
 
 - Align the main metrics to a four-beat reference: BPM over beat one, Subdivision between beats two and three, Gap over beat four.
