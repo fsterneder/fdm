@@ -26,7 +26,11 @@ A native macOS 13+ metronome inspired by the feel of a dedicated desktop instrum
 
 The build script compiles for your Mac's architecture, creates an app bundle, signs it locally, and makes a ZIP in `dist`. It does not install dependencies or change your security settings. You can move the app into Applications using Finder.
 
-The build also generates a custom macOS app icon for Finder and the Dock. The full window is now 320 points wide with tighter spacing and no decorative speaker grille. The bundle identifier is retained so existing tempo and sound preferences carry over.
+The build embeds a pre-rendered, multi-resolution macOS app icon for Finder and the Dock. The running app also loads this icon explicitly. The icon is stored as base64 in `Assets/AppIcon.icns.base64` and decoded with the built-in macOS base64 utility; no icon generation step or dependencies are needed. The full window is now 320 points wide with tighter spacing and no decorative speaker grille. The bundle identifier is retained so existing tempo and sound preferences carry over.
+
+## Visual design
+
+Version 0.2.0 replaces the default bordered buttons with rounded hardware-style controls, an orange transport button, custom sound selectors, compact pattern menus, a recessed sage tempo display, and a calibrated tempo dial. Beat indicators use the same playback state in both window modes. The bundled icon and build number are updated; quit any older running copy before opening the rebuilt app.
 
 ## Controls
 
@@ -38,7 +42,7 @@ Audio clicks use AVAudioPlayerNode sample positions and a half-second scheduling
 
 ## Widget mode
 
-Click the small widget icon beside fdm-3, or press Shift–Command–M, to switch to a 168 × 72 floating window that displays the tempo with a visible expand button. It stays above ordinary app windows, including while another app is active. Drag the background to move it. Playback continues when switching modes.
+Click the small widget icon beside fdm-3, or press Shift–Command–M, to switch to a 196 × 82 floating window that displays the tempo, current beat indicators, and a visible expand button. It stays above ordinary app windows, including while another app is active. Drag the background to move it. Playback continues when switching modes.
 
 Click the expand button to return to the full window. Right-click the widget for Start/Stop, Tap Tempo, or Show Full fdm-3. Shift–Command–M also returns to the full instrument. Keyboard shortcuts apply while a metronome window is focused; they are not system-wide shortcuts. Space overrides focused button activation and holding it does not repeatedly toggle playback.
 
@@ -48,11 +52,11 @@ There is no published tap or binary yet. Do not expect `brew install --cask fdm-
 
 After testing the app on your Mac:
 
-1. Host the exact `dist/fdm-3-0.1.0.zip` file at an HTTPS URL (for example, a GitHub release).
+1. Host the exact `dist/fdm-3-0.2.0.zip` file at an HTTPS URL (for example, a GitHub release).
 2. Generate a cask using that URL:
 
    ```sh
-   bash scripts/make-cask.sh https://YOUR-HOST/fdm-3-0.1.0.zip
+   bash scripts/make-cask.sh https://YOUR-HOST/fdm-3-0.2.0.zip
    ```
 
 3. Put the generated `dist/Casks/fdm-3.rb` in a GitHub repository named `homebrew-fdm-3` under its `Casks` folder.
