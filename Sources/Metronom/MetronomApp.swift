@@ -151,6 +151,7 @@ private enum Finish {
     static let muted = Color(red: 0.52, green: 0.56, blue: 0.56)
     static let lcd = Color(red: 0.74, green: 0.81, blue: 0.66)
     static let orange = Color(red: 1.0, green: 0.49, blue: 0.25)
+    static let transportRed = Color(red: 0.92, green: 0.20, blue: 0.24)
 }
 
 struct InstrumentButtonStyle: ButtonStyle {
@@ -158,11 +159,11 @@ struct InstrumentButtonStyle: ButtonStyle {
     var radius: CGFloat = 10
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundColor(accent ? Finish.ink : Color(white: 0.87))
+            .foregroundColor(accent ? Color.white : Color(white: 0.87))
             .background(
                 LinearGradient(
                     colors: accent
-                        ? [Finish.orange, Color(red: 0.88, green: 0.35, blue: 0.16)]
+                        ? [Finish.transportRed, Color(red: 0.66, green: 0.08, blue: 0.12)]
                         : [Color(white: 0.23), Color(white: 0.16)],
                     startPoint: .top, endPoint: .bottom
                 ),
@@ -176,24 +177,117 @@ struct InstrumentButtonStyle: ButtonStyle {
     }
 }
 
-struct BeatStrip: View {
-    let beats: Int
-    let current: Int
-    var dark = false
+// Vector LCD digits keep the hardware's segment proportions at every scale.
+private enum LCDSegments {
+    // Segments: top, upper-right, lower-right, bottom, lower-left, upper-left, middle.
+    static let numbers: [[Int]] = [
+        [0,1,2,3,4,5], [1,2], [0,1,6,4,3], [0,1,6,2,3], [5,6,1,2],
+        [0,5,6,2,3], [0,5,6,4,2,3], [0,1,2], [0,1,2,3,4,5,6], [0,1,2,3,5,6]
+    ]
+    static let polygons: [[CGPoint]] = [
+        [CGPoint(x:8,y:0),CGPoint(x:32,y:0),CGPoint(x:37,y:5),CGPoint(x:32,y:10),CGPoint(x:8,y:10),CGPoint(x:3,y:5)],
+        [CGPoint(x:38,y:6),CGPoint(x:40,y:9),CGPoint(x:40,y:32),CGPoint(x:35,y:37),CGPoint(x:30,y:32),CGPoint(x:30,y:14)],
+        [CGPoint(x:35,y:39),CGPoint(x:40,y:44),CGPoint(x:40,y:67),CGPoint(x:37,y:70),CGPoint(x:30,y:62),CGPoint(x:30,y:44)],
+        [CGPoint(x:8,y:66),CGPoint(x:32,y:66),CGPoint(x:37,y:71),CGPoint(x:32,y:76),CGPoint(x:8,y:76),CGPoint(x:3,y:71)],
+        [CGPoint(x:5,y:39),CGPoint(x:10,y:44),CGPoint(x:10,y:62),CGPoint(x:3,y:70),CGPoint(x:0,y:67),CGPoint(x:0,y:44)],
+        [CGPoint(x:2,y:6),CGPoint(x:10,y:14),CGPoint(x:10,y:32),CGPoint(x:5,y:37),CGPoint(x:0,y:32),CGPoint(x:0,y:9)],
+        [CGPoint(x:8,y:33),CGPoint(x:32,y:33),CGPoint(x:37,y:38),CGPoint(x:32,y:43),CGPoint(x:8,y:43),CGPoint(x:3,y:38)]
+    ]
+    static func path(digit: Int, origin: CGPoint, height: CGFloat) -> Path {
+        var path = Path()
+        let scale = height / 76
+        for segment in numbers[min(9, max(0, digit))] {
+            let points = polygons[segment].map { point in
+                // A slight lean matches a physical segmented LCD.
+                CGPoint(x: origin.x + (point.x + (76 - point.y) * 0.07) * scale,
+                        y: origin.y + point.y * scale)
+            }
+            path.addLines(points)
+            path.closeSubpath()
+        }
+        return path
+    }
+}
+
+@MainActor
+struct HardwareLCD: View {
+    @ObservedObject var model: Metronome
     var compact = false
+    private let ink = Color(red: 0.08, green: 0.12, blue: 0.095)
     var body: some View {
-        HStack(spacing: compact ? 5 : 6) {
-            ForEach(0..<max(1, beats), id: \.self) { index in
-                Capsule()
-                    .fill(index == current
-                        ? (dark ? Color.black.opacity(0.78) : Finish.orange)
-                        : (dark ? Color.black.opacity(0.14) : Color.white.opacity(0.13)))
-                    .frame(width: compact ? 10 : 16, height: compact ? 4 : 5)
+        Canvas { context, size in
+            let logical = compact ? CGSize(width: 140, height: 66) : CGSize(width: 280, height: 154)
+            context.scaleBy(x: size.width / logical.width, y: size.height / logical.height)
+            func label(_ text: String, x: CGFloat, y: CGFloat, size: CGFloat = 10) {
+                context.draw(Text(text).font(.system(size: size, weight: .medium))
+                    .foregroundColor(ink), at: CGPoint(x: x, y: y), anchor: .topLeading)
+            }
+            func number(_ value: Int, places: Int, x: CGFloat, y: CGFloat, height: CGFloat) {
+                let chars = Array(String(value))
+                let advance = height * 0.59
+                for index in 0..<places {
+                    let source = index - (places - chars.count)
+                    if source >= 0, source < chars.count, let digit = chars[source].wholeNumberValue {
+                        context.fill(LCDSegments.path(digit: digit,
+                            origin: CGPoint(x: x + CGFloat(index) * advance, y: y),
+                            height: height), with: .color(ink))
+                    }
+                }
+            }
+            if compact {
+                number(model.bpm, places: 3, x: 9, y: 7, height: 38)
+                label("TEMPO", x: 87, y: 32, size: 7)
+            } else {
+                number(model.bpm, places: 3, x: 69, y: 15, height: 70)
+                number(model.beats, places: 1, x: 227, y: 15, height: 70)
+                label("TEMPO", x: 9, y: 69, size: 11)
+                label("BEAT", x: 188, y: 69, size: 11)
+                label("VOICE", x: 47, y: 105, size: 10)
+                number(model.sound + 1, places: 1, x: 101, y: 93, height: 29)
+                // Printed metronome symbol, rather than a modern status light.
+                var symbol = Path()
+                symbol.move(to: CGPoint(x: 11, y: 115))
+                symbol.addLine(to: CGPoint(x: 15, y: 97))
+                symbol.addLine(to: CGPoint(x: 23, y: 97))
+                symbol.addLine(to: CGPoint(x: 27, y: 115))
+                symbol.closeSubpath()
+                symbol.move(to: CGPoint(x: 18, y: 111))
+                symbol.addLine(to: CGPoint(x: 27, y: 95))
+                context.stroke(symbol, with: .color(ink), lineWidth: 1.8)
+            }
+            let count = max(1, model.beats)
+            let width: CGFloat = compact ? 9 : 18
+            let height: CGFloat = compact ? 9 : 19
+            let spacing: CGFloat = compact ? 4 : 7
+            let y: CGFloat = compact ? 52 : 127
+            for index in 0..<count {
+                let x = CGFloat(index) * (width + spacing) + (compact ? 11 : 10)
+                var triangle = Path()
+                triangle.move(to: CGPoint(x: x, y: y))
+                triangle.addLine(to: CGPoint(x: x + width, y: y + height / 2))
+                triangle.addLine(to: CGPoint(x: x, y: y + height))
+                triangle.closeSubpath()
+                // The hardware fills the markers up to the current beat.
+                if model.currentBeat >= 0 && index <= model.currentBeat {
+                    context.fill(triangle, with: .color(ink))
+                }
+                context.stroke(triangle, with: .color(ink), lineWidth: compact ? 0.8 : 1.2)
             }
         }
+        .background(
+            LinearGradient(colors: [
+                Color(red: 0.64, green: 0.69, blue: 0.60),
+                Color(red: 0.71, green: 0.75, blue: 0.66),
+                Color(red: 0.63, green: 0.68, blue: 0.59)
+            ], startPoint: .topLeading, endPoint: .bottomTrailing),
+            in: RoundedRectangle(cornerRadius: compact ? 5 : 9)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: compact ? 5 : 9))
+        .overlay(RoundedRectangle(cornerRadius: compact ? 5 : 9)
+            .strokeBorder(.black.opacity(0.65), lineWidth: compact ? 1 : 2))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Beats")
-        .accessibilityValue(current < 0 ? "Stopped" : "Beat \(current + 1) of \(max(1, beats))")
+        .accessibilityLabel("LCD")
+        .accessibilityValue("\(model.bpm) beats per minute, \(model.beats == 0 ? "no accent" : "\(model.beats) beats per bar"), voice \(model.sound + 1), \(model.playing ? "playing" : "stopped")")
     }
 }
 
@@ -261,35 +355,7 @@ struct InstrumentView: View {
                 .help("Widget mode (⇧⌘M)")
                 .accessibilityLabel("Enter widget mode")
             }
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("TEMPO").font(.system(size: 9, weight: .semibold)).tracking(2)
-                    Spacer()
-                    Circle().fill(.black.opacity(model.playing ? 0.75 : 0.16))
-                        .frame(width: 5, height: 5)
-                }
-                HStack(alignment: .firstTextBaseline) {
-                    Text(String(model.bpm))
-                        .font(.system(size: 66, weight: .regular, design: .monospaced))
-                        .monospacedDigit().tracking(-4)
-                        .accessibilityLabel("Tempo")
-                        .accessibilityValue("\(model.bpm) beats per minute")
-                    Spacer(minLength: 8)
-                    Text("BPM").font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .tracking(1)
-                }
-                BeatStrip(beats: model.beats, current: model.currentBeat, dark: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 1)
-            }
-            .foregroundColor(.black.opacity(0.72))
-            .padding(.horizontal, 18).padding(.vertical, 14)
-            .background(
-                LinearGradient(colors: [Finish.lcd, Color(red: 0.66, green: 0.74, blue: 0.58)],
-                               startPoint: .topLeading, endPoint: .bottomTrailing),
-                in: RoundedRectangle(cornerRadius: 10)
-            )
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.black.opacity(0.6), lineWidth: 2))
+            HardwareLCD(model: model).frame(height: 154)
 
             HStack(spacing: 24) {
                 stepButton("minus", label: "Decrease tempo") { model.bpm -= 1 }
@@ -335,7 +401,7 @@ struct InstrumentView: View {
                         Text(model.playing ? "STOP" : "START")
                             .font(.system(size: 11, weight: .bold)).tracking(1.5)
                     }.frame(maxWidth: .infinity).frame(height: 42)
-                }.buttonStyle(InstrumentButtonStyle(accent: true))
+                }.buttonStyle(InstrumentButtonStyle(accent: model.playing))
             }
 
             VStack(spacing: 10) {
@@ -477,23 +543,8 @@ struct TempoWidget: View {
     @ObservedObject var model: Metronome
     var showInstrument: () -> Void
     var body: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Text(String(model.bpm))
-                        .font(.system(size: 38, weight: .regular, design: .monospaced))
-                        .monospacedDigit().tracking(-2)
-                        .foregroundColor(Finish.lcd)
-                        .accessibilityLabel("Tempo")
-                        .accessibilityValue("\(model.bpm) beats per minute")
-                        .accessibilityAdjustableAction { direction in
-                            model.bpm += direction == .increment ? 1 : -1
-                        }
-                    Text("BPM").font(.system(size: 8, weight: .medium))
-                        .foregroundColor(Finish.muted)
-                }
-                BeatStrip(beats: model.beats, current: model.currentBeat, compact: true)
-            }
+        HStack(spacing: 8) {
+            HardwareLCD(model: model, compact: true).frame(width: 140, height: 66)
             Spacer(minLength: 0)
             Button(action: showInstrument) {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
@@ -504,7 +555,7 @@ struct TempoWidget: View {
             .help("Return to fdm-3 (⇧⌘M)")
             .accessibilityLabel("Return to full fdm-3 window")
         }
-        .padding(.horizontal, 14).frame(width: 196, height: 82)
+        .padding(.horizontal, 10).frame(width: 196, height: 82)
         .background(LinearGradient(colors: [Finish.panel, Finish.ink],
                                   startPoint: .topLeading, endPoint: .bottomTrailing),
                     in: RoundedRectangle(cornerRadius: 13))
