@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.2
+
+- Restore Default's green LCD, dark monochrome display ink, charcoal controls, and orange wheel pointer.
+- Use a neutral logo and neutral regular controls across every theme; retain the active Start/Stop color.
+- Fill beat indicators cumulatively through each bar in both the main window and widget.
+- Keep the unaccented single indicator pulsing on each beat.
+
 ## 0.9.1
 
 - Replace the icon with the approved LCD, left wheel, and four-button layout.

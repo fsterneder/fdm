@@ -246,8 +246,8 @@ enum InstrumentTheme: String, CaseIterable {
     var palette: InstrumentPalette { InstrumentPalette(theme: self) }
 }
 
-// Every theme defines exactly the same six color roles.
-// Surfaces, borders, and disabled states are blends or opacities of these roles.
+// Themes share six color roles; Default retains its original monochrome LCD.
+// The other surfaces, borders, and disabled states derive from these roles.
 private struct ThemeColors {
     let background: UInt32
     let neutral: UInt32
@@ -261,7 +261,7 @@ struct InstrumentPalette {
     let theme: InstrumentTheme
     private var colors: ThemeColors {
         switch theme {
-        case .charcoal: return ThemeColors(background: 0x101213, neutral: 0xDDE4D8, tempo: 0xBBCDA1, beat: 0xE3BC89, playingBeat: 0x8DBAB2, action: 0xFF7D40)
+        case .charcoal: return ThemeColors(background: 0x0E1011, neutral: 0xFFFFFF, tempo: 0xFF7D40, beat: 0xE3BC89, playingBeat: 0x8DBAB2, action: 0xFF7D40)
         case .dracula: return ThemeColors(background: 0x282A36, neutral: 0xF8F8F2, tempo: 0xBD93F9, beat: 0xFFB86C, playingBeat: 0x8BE9FD, action: 0x50FA7B)
         case .nord: return ThemeColors(background: 0x2E3440, neutral: 0xECEFF4, tempo: 0x88C0D0, beat: 0xB48EAD, playingBeat: 0x8FBCBB, action: 0xA3BE8C)
         case .gruvbox: return ThemeColors(background: 0x282828, neutral: 0xEBDBB2, tempo: 0xFABD2F, beat: 0xFE8019, playingBeat: 0x8EC07C, action: 0xB8BB26)
@@ -308,13 +308,27 @@ struct InstrumentPalette {
         }
         return contrast(colors.background) >= contrast(colors.neutral) ? background : neutral
     }
-    var controlTop: Color { surface(0.11) }
-    var controlBottom: Color { surface(0.07) }
+    var controlTop: Color { theme == .charcoal ? color(0x3B3B3B) : surface(0.11) }
+    var controlBottom: Color { theme == .charcoal ? color(0x292929) : surface(0.07) }
     var recess: Color { surface(0.035) }
     var fieldBorder: Color { neutral.opacity(0.22) }
-    var bodyColors: [Color] { [background, background] }
-    var lcdGlass: [Color] { [background, background] }
-    var lcdBorder: Color { neutral.opacity(0.45) }
+    var bodyColors: [Color] { theme == .charcoal ? [color(0x1B1E1F), background] : [background, background] }
+    // Default retains the original monochrome hardware LCD.
+    var lcdNeutral: Color { theme == .charcoal ? color(0x141F18) : neutral }
+    var lcdTempo: Color { theme == .charcoal ? lcdNeutral : tempo }
+    var lcdBeat: Color { theme == .charcoal ? lcdNeutral : beat }
+    var lcdPlayingBeat: Color { theme == .charcoal ? lcdNeutral : playingBeat }
+    var lcdGlass: [Color] {
+        if theme == .charcoal {
+            return [
+                Color(red: 0.64, green: 0.69, blue: 0.60),
+                Color(red: 0.71, green: 0.75, blue: 0.66),
+                Color(red: 0.63, green: 0.68, blue: 0.59)
+            ]
+        }
+        return [background, background]
+    }
+    var lcdBorder: Color { theme == .charcoal ? background.opacity(0.65) : neutral.opacity(0.45) }
     var dialTop: Color { surface(0.14) }
     var dialBottom: Color { surface(0.08) }
 }
@@ -431,13 +445,13 @@ struct HardwareLCD: View {
         // Capture UI state before entering the drawing closures.
         let theme = model.theme
         let palette = theme.palette
-        let ink = palette.tempo
-        let beatInk = palette.beat
-        let labelInk = palette.neutral
-        let markerInk = palette.playingBeat
-        let pendulumInk = palette.neutral
-        let noteInk = palette.neutral
-        let gapInk = palette.neutral
+        let ink = palette.lcdTempo
+        let beatInk = palette.lcdBeat
+        let labelInk = palette.lcdNeutral
+        let markerInk = palette.lcdPlayingBeat
+        let pendulumInk = palette.lcdNeutral
+        let noteInk = palette.lcdNeutral
+        let gapInk = palette.lcdNeutral
         let borderInk = palette.lcdBorder
         let captionCapHeight = NSFont.systemFont(ofSize: 12.5, weight: .semibold).capHeight
         let gapCapHeight = NSFont.systemFont(ofSize: 8.5, weight: .semibold).capHeight
@@ -548,10 +562,10 @@ struct HardwareLCD: View {
                     triangle.addLine(to: CGPoint(x: x + markerWidth, y: 97.25))
                     triangle.addLine(to: CGPoint(x: x, y: 110))
                     triangle.closeSubpath()
-                    let isCurrent = beats == 0
-                        ? pulseVisible : (playing && currentBeat >= 0 && index == currentBeat)
-                    if isCurrent { context.fill(triangle, with: .color(markerInk)) }
-                    context.stroke(triangle, with: .color(isCurrent ? markerInk : labelInk), lineWidth: 1.7)
+                    let filled = beats == 0
+                        ? pulseVisible : (playing && currentBeat >= 0 && index <= currentBeat)
+                    if filled { context.fill(triangle, with: .color(markerInk)) }
+                    context.stroke(triangle, with: .color(filled ? markerInk : labelInk), lineWidth: 1.7)
                 }
             }
         }
@@ -733,7 +747,7 @@ struct ChoiceDropdown: View {
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 8, weight: .semibold))
-                        .foregroundColor(palette.action)
+                        .foregroundColor(palette.neutral.opacity(0.65))
                 }
             }
             .padding(.horizontal, 11)
@@ -817,11 +831,8 @@ struct InstrumentView: View {
         VStack(spacing: 16) {
             HStack(spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    (Text("f").foregroundColor(palette.tempo)
-                     + Text("d").foregroundColor(palette.beat)
-                     + Text("m").foregroundColor(palette.playingBeat)
-                     + Text("-").foregroundColor(palette.neutral)
-                     + Text("3").foregroundColor(palette.action))
+                    Text("fdm-3")
+                        .foregroundColor(palette.neutral)
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .tracking(-0.5)
                         .accessibilityLabel("fdm-3")
