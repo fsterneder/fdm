@@ -4,7 +4,7 @@ import TempoCore
 
 enum DisplayGeometry {
     static let width: CGFloat = 468
-    static let mainHeight: CGFloat = 208
+    static let mainHeight: CGFloat = 234
     static let widgetScale: CGFloat = 1.15
     static let widgetWidth: CGFloat = 244 * widgetScale
     static let widgetHeight: CGFloat = 40 * widgetScale
@@ -51,7 +51,7 @@ struct ModernReadout: View {
             let scale = min(geometry.size.width / DisplayGeometry.width,
                             geometry.size.height / DisplayGeometry.mainHeight)
             let column = DisplayGeometry.width / 3 * scale
-            VStack(spacing: 28 * scale) {
+            VStack(spacing: 0) {
                 HStack(spacing: 0) {
                     VStack(spacing: 2 * scale) {
                         TempoValue(model: model, fontSize: 68 * scale, width: column, height: 94 * scale)
@@ -106,8 +106,14 @@ struct ModernReadout: View {
                     }
                 }
                 .frame(height: 112 * scale)
+                .padding(.bottom, 28 * scale)
                 BeatLights(model: model, width: DisplayGeometry.width * scale, maxDiameter: 68 * scale, spacing: 24 * scale)
                     .frame(height: 68 * scale)
+                Group {
+                    if model.gap != 0 { BarSequenceDots(model: model, scale: scale) }
+                }
+                .frame(width: DisplayGeometry.width * scale, height: 8 * scale)
+                .padding(.top, 18 * scale)
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .center)
         }
@@ -116,6 +122,37 @@ struct ModernReadout: View {
         Text(title).font(.system(size: 10 * scale, weight: .medium))
             .tracking(1.4 * scale).foregroundColor(palette.neutral.opacity(0.65))
             .lineLimit(1).frame(height: 16 * scale)
+    }
+}
+
+@MainActor
+private struct BarSequenceDots: View {
+    @ObservedObject var model: Metronome
+    let scale: CGFloat
+    private var neutral: Color { model.theme.palette.neutral }
+    var body: some View {
+        let audible = model.sequenceAudibleBars
+        let total = audible + model.sequenceSilentBars
+        let current = model.sequenceCurrentBar
+        return HStack(spacing: 8 * scale) {
+            if audible == 0 {
+                Image(systemName: "shuffle").font(.system(size: 9 * scale))
+                    .foregroundColor(neutral.opacity(0.55))
+            }
+            ForEach(0..<total, id: \.self) { index in
+                Circle()
+                    .fill(neutral.opacity(index == current ? 1 : (index < audible ? 0.55 : 0.18)))
+                    .frame(width: 7 * scale, height: 7 * scale)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Gap bar sequence")
+        .accessibilityValue(current >= 0
+            ? "Bar \(current + 1) of \(total), \(current < audible ? "audible" : "silent"). \(audible) audible and \(model.sequenceSilentBars) silent bars."
+            : (audible == 0
+                ? "Random audible run, then \(model.sequenceSilentBars) silent bars."
+                : "\(audible) audible and \(model.sequenceSilentBars) silent bars."))
+        .help("Each small dot is one bar. Brightest: current; softer: audible; faint: silent.")
     }
 }
 

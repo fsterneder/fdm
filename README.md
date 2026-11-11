@@ -33,6 +33,8 @@ Tempo, sound, accent, and subdivision changes take effect on the next beat. Beat
 
 Play 1, 2, or 4 audible bars, then 1–8 silent bars. **Random** chooses a fresh audible run length each cycle. The Gap slot shows silent bars remaining, such as **2/2 → 1/2**.
 
+When Gap is on, small neutral dots below the beats show the bar sequence: current brightest, audible softer, silent faint. Random shows the run chosen for the current cycle.
+
 Existing beat-based gap lengths round up to whole bars. Accent is independent of meter. Closing the main window quits the app.
 
 The Dock icon follows the selected theme; Finder uses Default. Homebrew installation is not published yet. See [CHANGELOG.md](CHANGELOG.md).

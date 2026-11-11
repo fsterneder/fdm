@@ -27,6 +27,7 @@ struct FDMEngine {
     FDMConfig active;
     uint32_t beat, subdivision, random;
     uint32_t audibleBarsLeft, silentBarsLeft, gapRemaining;
+    uint32_t cycleAudibleBars, cycleBar;
     bool needsGapPlan, silent;
     const Clip *clip;
     uint32_t clipPosition;
@@ -127,17 +128,21 @@ static uint32_t audibleCount(FDMEngine *e) {
 static void beginBar(FDMEngine *e) {
     if (!e->active.gap) {
         e->silent = false; e->gapRemaining = 0; e->needsGapPlan = true;
+        e->cycleAudibleBars = 0; e->cycleBar = 0;
         return;
     }
     if (e->needsGapPlan) {
         e->audibleBarsLeft = audibleCount(e);
+        e->cycleAudibleBars = e->audibleBarsLeft;
         e->silentBarsLeft = e->active.gapBars;
         e->needsGapPlan = false;
     }
     if (e->audibleBarsLeft) {
+        e->cycleBar = e->cycleAudibleBars - e->audibleBarsLeft;
         --e->audibleBarsLeft;
         e->silent = false; e->gapRemaining = 0;
     } else {
+        e->cycleBar = e->cycleAudibleBars + e->active.gapBars - e->silentBarsLeft;
         e->silent = true; e->gapRemaining = e->silentBarsLeft;
         if (--e->silentBarsLeft == 0) e->needsGapPlan = true;
     }
@@ -158,7 +163,8 @@ static void beginBeat(FDMEngine *e, uint64_t hostTime) {
     }
     push(e, (FDMBeatEvent){
         .epoch = e->seenEpoch, .hostTime = hostTime, .number = ++e->number,
-        .beat = e->beat, .gapBarsRemaining = e->gapRemaining, .config = e->active
+        .beat = e->beat, .gapBarsRemaining = e->gapRemaining,
+        .cycleAudibleBars = e->cycleAudibleBars, .cycleBar = e->cycleBar, .config = e->active
     });
 }
 void FDMEngineRender(FDMEngine *e, float *output, uint32_t frames, uint64_t hostTime, double hostTicksPerFrame) {

@@ -110,6 +110,19 @@ final class Metronome: ObservableObject {
     var playbackAccent: Bool { activeConfiguration.accent }
     var playbackBPM: Int { activeConfiguration.bpm }
     var playbackGapBars: Int { activeConfiguration.gapBars }
+    private var hasPlayingBarSequence: Bool {
+        playing && (snapshot?.event.cycleAudibleBars ?? 0) > 0
+    }
+    // Random has no chosen run before Start; its preview uses a shuffle symbol.
+    var sequenceAudibleBars: Int {
+        hasPlayingBarSequence ? (snapshot?.event.cycleAudibleBars ?? 0) : max(0, gap)
+    }
+    var sequenceSilentBars: Int {
+        hasPlayingBarSequence ? playbackGapBars : gapBars
+    }
+    var sequenceCurrentBar: Int {
+        hasPlayingBarSequence ? (snapshot?.event.cycleBar ?? -1) : -1
+    }
     @Published var error: String?
     private let audio = ContinuousAudio()
     private var timer: Timer?
@@ -636,7 +649,7 @@ struct InstrumentView: View {
             .help("Start / Stop (Space)")
             .accessibilityLabel(model.playing ? "Stop metronome" : "Start metronome")
         }
-        .frame(width: 36, height: 208)
+        .frame(width: 36, height: DisplayGeometry.mainHeight)
     }
 }
 

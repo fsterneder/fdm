@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.16.0
+
+- Show a small neutral bar-sequence row below the beat indicators when Gap is enabled.
+- Mark the current bar brightest, other audible bars softer, and silent bars faint.
+- Follow actual audio-cycle positions, including the chosen audible run in Random mode.
+- Keep the widget compact and preserve existing Gap controls and countdown.
+
 ## 0.15.2
 
 - Preview beat-count and accent edits immediately in both windows while preserving audio timing.

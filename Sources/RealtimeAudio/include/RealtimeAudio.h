@@ -13,6 +13,7 @@ typedef struct {
 typedef struct {
     uint64_t epoch, hostTime, number;
     uint32_t beat, gapBarsRemaining;
+    uint32_t cycleAudibleBars, cycleBar;
     FDMConfig config;
 } FDMBeatEvent;
 

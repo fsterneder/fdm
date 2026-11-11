@@ -112,6 +112,8 @@ static void editsDuringGap(void) {
     assert(h->events[3].config.bpm == 240 && h->events[3].gapBarsRemaining == 2);
     assert(h->events[4].hostTime == 84000 && h->events[4].gapBarsRemaining == 1);
     assert(h->events[6].number == 7 && h->events[6].gapBarsRemaining == 0);
+    assert(h->events[3].cycleBar == 1 && h->events[4].cycleBar == 2);
+    assert(h->events[6].cycleBar == 0 && h->events[6].cycleAudibleBars == 1);
     destroy(h);
 }
 static void gapEditAtBar(void) {
@@ -138,6 +140,12 @@ static void randomWholeBars(void) {
         for (unsigned i = 0; i < h->eventCount; ++i) {
             FDMBeatEvent e = h->events[i];
             assert(e.number == i + 1 && e.beat == 0);
+            assert(e.cycleAudibleBars == 1 || e.cycleAudibleBars == 2 || e.cycleAudibleBars == 4);
+            assert(e.cycleBar < e.cycleAudibleBars + length);
+            if (e.gapBarsRemaining)
+                assert(e.cycleBar == e.cycleAudibleBars + length - e.gapBarsRemaining);
+            else
+                assert(e.cycleBar == audible);
             if (!e.gapBarsRemaining) { ++audible; continue; }
             if (e.gapBarsRemaining == length) {
                 assert(audible == 1 || audible == 2 || audible == 4);
@@ -186,6 +194,27 @@ static void stalledUIAndRestart(void) {
     assert(h->clicks[h->clickCount-1].frame == startFrame);
     destroy(h);
 }
+static void barSequencePositions(void) {
+    FDMConfig c = config(); c.gap = 2; c.gapBars = 2; c.subdivisions = 3;
+    Harness *h = create(c);
+    advance(h, 384001, true); // Four 4-beat bars plus the next cycle's downbeat.
+    assert(h->eventCount == 17);
+    for (unsigned i = 0; i < h->eventCount; ++i) {
+        FDMBeatEvent e = h->events[i];
+        unsigned bar = (i / 4) % 4;
+        assert(e.cycleAudibleBars == 2 && e.cycleBar == bar);
+        assert(e.gapBarsRemaining == (bar < 2 ? 0 : 4 - bar));
+        assert(e.beat == i % 4);
+    }
+    // Gap Off commits on the next bar and removes all sequence state.
+    c.gap = 0;
+    FDMEngineConfigure(h->engine, c);
+    advance(h, 480001, true);
+    FDMBeatEvent last = h->events[h->eventCount - 1];
+    assert(last.beat == 0 && last.config.gap == 0);
+    assert(last.cycleAudibleBars == 0 && last.cycleBar == 0);
+    destroy(h);
+}
 static void coalescedEdits(void) {
     FDMConfig c = config();
     Harness *h = create(c);
@@ -227,8 +256,8 @@ static void concurrentControls(void) {
 int main(void) {
     nextBeatAndBar(); finishCurrentSubdivision(); gapCountdown();
     editsDuringGap(); gapEditAtBar(); randomWholeBars();
-    fractionalClock(); stalledUIAndRestart(); coalescedEdits(); concurrentControls();
-    puts("Transport: 10 regression scenarios passed.");
+    fractionalClock(); stalledUIAndRestart(); coalescedEdits(); concurrentControls(); barSequencePositions();
+    puts("Transport: 11 regression scenarios passed.");
     return 0;
 }
 

@@ -32,6 +32,8 @@ struct RenderedBeat {
     let number: UInt64
     let beat: Int
     let gapBarsRemaining: Int
+    let cycleAudibleBars: Int
+    let cycleBar: Int
     let configuration: PlaybackConfiguration
 }
 
@@ -104,6 +106,7 @@ final class ContinuousAudio {
         guard FDMEnginePoll(state.pointer, &event) else { return nil }
         return RenderedBeat(epoch: event.epoch, hostTime: event.hostTime, number: event.number,
                             beat: Int(event.beat), gapBarsRemaining: Int(event.gapBarsRemaining),
+                            cycleAudibleBars: Int(event.cycleAudibleBars), cycleBar: Int(event.cycleBar),
                             configuration: PlaybackConfiguration(event.config))
     }
 }
