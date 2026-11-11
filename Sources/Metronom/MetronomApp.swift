@@ -468,9 +468,15 @@ struct InstrumentView: View {
 
     private var soundSelector: some View {
         Menu {
-            Picker("Sound", selection: $model.sound) {
-                ForEach(ClickVoice.allCases, id: \.rawValue) { voice in
-                    Text(voice.name).tag(voice.rawValue)
+            ForEach(ClickVoice.allCases, id: \.rawValue) { voice in
+                Button {
+                    model.sound = voice.rawValue
+                } label: {
+                    if model.sound == voice.rawValue {
+                        Label(voice.name, systemImage: "checkmark")
+                    } else {
+                        Text(voice.name)
+                    }
                 }
             }
         } label: {
