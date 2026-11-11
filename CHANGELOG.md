@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.4
+
+- Enlarge the icon's metronome symbol and separate its pendulum from the base.
+- Place the pendulum at three quarters of its rightward swing.
+- Update the running Dock icon when the selected theme changes; keep Finder's icon Dracula.
+- Resize icon images with sips at explicit pixel dimensions to avoid bitmap scaling and clipping.
+
 ## 0.8.3
 
 - Simplify the icon to the LCD metronome symbol in Dracula purple and pink, with its pendulum leaning right.

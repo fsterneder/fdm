@@ -65,7 +65,10 @@ final class Metronome: ObservableObject {
         didSet { UserDefaults.standard.set(gap, forKey: "gap"); restart() }
     }
     @Published var theme: InstrumentTheme {
-        didSet { UserDefaults.standard.set(theme.rawValue, forKey: "theme") }
+        didSet {
+            UserDefaults.standard.set(theme.rawValue, forKey: "theme")
+            ThemedDockIcon.apply(theme)
+        }
     }
     @Published var editingTempo = false
     private var lastAudibleVolume = 0.65
@@ -468,6 +471,59 @@ extension EnvironmentValues {
     var instrumentTheme: InstrumentTheme {
         get { self[InstrumentThemeKey.self] }
         set { self[InstrumentThemeKey.self] = newValue }
+    }
+}
+
+
+@MainActor
+private enum ThemedDockIcon {
+    static func apply(_ theme: InstrumentTheme) {
+        // Capture colors before AppKit calls the resolution-independent drawing handler.
+        let palette = theme.palette
+        let background = NSColor(palette.ink)
+        let frame = NSColor(palette.lcdDigitColor)
+        let pendulum: NSColor
+        switch theme {
+        case .dracula: pendulum = NSColor(calibratedRed: 1, green: 121.0 / 255, blue: 198.0 / 255, alpha: 1)
+        case .charcoal: pendulum = NSColor(Finish.lcd)
+        default: pendulum = NSColor(palette.beatColor)
+        }
+        let image = NSImage(size: NSSize(width: 1024, height: 1024), flipped: false) { bounds in
+            // Draw in the actual requested bounds; never assume a bitmap's backing scale.
+            let sx = bounds.width / 1024
+            let sy = bounds.height / 1024
+            func point(_ x: CGFloat, _ y: CGFloat) -> NSPoint {
+                NSPoint(x: bounds.minX + x * sx, y: bounds.minY + y * sy)
+            }
+            let tileRect = NSRect(x: bounds.minX + 64 * sx, y: bounds.minY + 64 * sy,
+                                  width: 896 * sx, height: 896 * sy)
+            background.setFill()
+            NSBezierPath(roundedRect: tileRect, xRadius: 180 * sx, yRadius: 180 * sy).fill()
+
+            let body = NSBezierPath()
+            body.move(to: point(160, 196))
+            body.line(to: point(376, 790))
+            body.line(to: point(648, 790))
+            body.line(to: point(864, 196))
+            body.close()
+            body.lineWidth = 40 * min(sx, sy)
+            frame.setStroke()
+            body.stroke()
+
+            // Three quarters of the display animation's 0.5-radian rightward swing.
+            // The lower endpoint floats above the base with a visible gap.
+            let angle = 0.5 * 0.75
+            let arm = NSBezierPath()
+            arm.move(to: point(512, 280))
+            arm.line(to: point(512 + CGFloat(sin(angle) * 630),
+                              280 + CGFloat(cos(angle) * 630)))
+            arm.lineWidth = 44 * min(sx, sy)
+            pendulum.setStroke()
+            arm.stroke()
+            return true
+        }
+        image.isTemplate = false
+        NSApp.applicationIconImage = image
     }
 }
 
@@ -1178,15 +1234,8 @@ final class WindowModes: ObservableObject {
         mainWindow = window
         window.isReleasedWhenClosed = false
         self.model = model
-        // Load the source PNG for the running Dock icon independently of ICNS decoding.
-        // Finder uses the native ICNS generated and embedded by the build script.
-        for ext in ["png", "icns"] {
-            if let url = Bundle.main.url(forResource: "AppIcon", withExtension: ext),
-               let icon = NSImage(contentsOf: url), icon.isValid {
-                NSApp.applicationIconImage = icon
-                break
-            }
-        }
+        // Apply the saved theme on launch; later theme changes refresh the Dock immediately.
+        ThemedDockIcon.apply(model.theme)
         if let closeObserver { NotificationCenter.default.removeObserver(closeObserver) }
         closeObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification, object: window, queue: .main
