@@ -75,6 +75,7 @@ final class Metronome: ObservableObject {
     private var timer: Timer?
     private var nextFrame: Double = 0
     private var tick = 0
+    private var gapSequence = GapSequence()
     private var generation = UUID()
     private var tapper = TapTempo()
     private var buffers: [AVAudioPCMBuffer] = []
@@ -116,6 +117,7 @@ final class Metronome: ObservableObject {
             }
             playing = true
             inSilentBar = false
+            gapSequence = GapSequence()
             nextFrame = 0; tick = 0; currentBeat = -1; beatTime = 0; beatNumber = 0
             activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .idleSystemSleepDisabled], reason: "Playing metronome")
             // Audio sample times determine every click; the timer only replenishes the queue.
@@ -148,7 +150,7 @@ final class Metronome: ObservableObject {
             let mainBeat = tick % subdivisions == 0
             let beat = beats == 0 ? 0 : (tick / subdivisions) % beats
             let kind = !mainBeat ? 2 : (beats > 0 && beat == 0 ? 0 : 1)
-            let silent = GapCycle.isSilent(tick: tick, beats: beats, subdivisions: subdivisions, silentBars: gap)
+            let silent = gapSequence.isSilent(tick: tick, beats: beats, subdivisions: subdivisions, audibleBars: gap)
             let buffer = silent ? silentBuffers[kind] : buffers[kind]
             let frame = AVAudioFramePosition(nextFrame.rounded())
             player.scheduleBuffer(buffer, at: AVAudioTime(sampleTime: frame, atRate: format.sampleRate), options: [], completionCallbackType: .dataPlayedBack) { [weak self] _ in
@@ -749,9 +751,9 @@ struct InstrumentView: View {
     private var gapSelector: some View {
         ChoiceDropdown(
             title: "GAP", selectedID: String(model.gap),
-            selectedLabel: model.gap == 0 ? "Off" : "\(model.gap) silent \(model.gap == 1 ? "bar" : "bars")",
+            selectedLabel: GapCycle.label(for: model.gap),
             options: GapCycle.options.map {
-                DropdownChoice(id: String($0), label: $0 == 0 ? "Off" : "\($0) silent \($0 == 1 ? "bar" : "bars")")
+                DropdownChoice(id: String($0), label: GapCycle.label(for: $0))
             }
         ) { id in
             if let gap = Int(id), GapCycle.options.contains(gap) { model.gap = gap }
