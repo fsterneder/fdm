@@ -18,14 +18,8 @@ enum DisplayGeometry {
 struct ModernReadout: View {
     @ObservedObject var model: Metronome
     private var palette: InstrumentPalette { model.theme.palette }
-    private var subdivisionText: String {
-        switch model.subdivisions {
-        case 2: return "1/8"
-        case 3: return "1/8T"
-        case 4: return "1/16"
-        default: return "1/4"
-        }
-    }
+    private var subdivisionText: String { Subdivision.label(model.subdivisions) }
+    private var subdivisionIndex: Int { Subdivision.options.firstIndex(of: model.subdivisions) ?? 2 }
     private var gapIndex: Int { GapCycle.options.firstIndex(of: model.gap) ?? 0 }
     @ViewBuilder
     private var gapValue: some View {
@@ -70,9 +64,10 @@ struct ModernReadout: View {
                     }
                     .frame(width: column)
                     .overlay {
-                        ValueDragArea(value: model.subdivisions, bounds: 1...4, pointsPerStep: 12,
+                        ValueDragArea(value: subdivisionIndex, bounds: 0...(Subdivision.options.count - 1), pointsPerStep: 12,
                             onSet: { value in
-                                if model.subdivisions != value { model.subdivisions = value }
+                                let subdivision = Subdivision.options[value]
+                                if model.subdivisions != subdivision { model.subdivisions = subdivision }
                             }, onDoubleClick: nil, onDragState: { model.editingTempo = $0 })
                             .frame(width: column, height: 112 * scale)
                             .accessibilityHidden(true)
@@ -80,7 +75,7 @@ struct ModernReadout: View {
                     .help("Drag up/down to change subdivision.")
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("Subdivision")
-                    .accessibilityValue("\(model.subdivisions) clicks per beat")
+                    .accessibilityValue(Subdivision.description(model.subdivisions))
                     VStack(spacing: 2 * scale) {
                         gapValue
                             .font(.system(size: 52 * scale, weight: .regular))

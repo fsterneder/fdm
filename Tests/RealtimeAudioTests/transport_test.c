@@ -265,12 +265,74 @@ static void cappedMeter(void) {
     }
     destroy(h);
 }
+static void sparseNoteModes(void) {
+    for (int mode = -2; mode <= -1; ++mode) {
+        FDMConfig c = config(); c.subdivisions = mode;
+        Harness *h = create(c);
+        advance(h, 264001, true); // Twelve quarter-note visual beats.
+        unsigned interval = mode == -2 ? 4 : 2;
+        assert(h->eventCount == 12 && h->clickCount == 12 / interval);
+        for (unsigned i = 0; i < h->eventCount; ++i) {
+            assert(h->events[i].beat == i % 4 && h->events[i].number == i + 1);
+            assert(h->events[i].hostTime == i * 24000);
+            assert(h->events[i].config.subdivisions == mode);
+        }
+        for (unsigned i = 0; i < h->clickCount; ++i)
+            assert(h->clicks[i].frame == i * interval * 24000);
+        destroy(h);
+    }
+}
+static void sparseOddMeter(void) {
+    FDMConfig c = config(); c.beats = 3; c.subdivisions = -2;
+    Harness *h = create(c);
+    advance(h, 192001, true);
+    assert(h->eventCount == 9 && h->clickCount == 3);
+    for (unsigned i = 0; i < h->eventCount; ++i)
+        assert(h->events[i].beat == i % 3);
+    for (unsigned i = 0; i < h->clickCount; ++i)
+        assert(h->clicks[i].frame == i * 96000);
+    assert(h->clicks[0].value == 1);
+    assert(h->clicks[1].value == 2 && h->clicks[2].value == 2);
+    destroy(h);
+}
+static void sparseLiveChanges(void) {
+    FDMConfig c = config(); c.subdivisions = 2;
+    Harness *h = create(c);
+    advance(h, 6000, true);
+    c.subdivisions = -1;
+    FDMEngineConfigure(h->engine, c);
+    advance(h, 54000, true);
+    c.subdivisions = 4;
+    FDMEngineConfigure(h->engine, c);
+    advance(h, 90001, true);
+    const uint64_t expected[] = {0, 12000, 48000, 72000, 78000, 84000, 90000};
+    assert(h->clickCount == sizeof(expected) / sizeof(expected[0]));
+    for (unsigned i = 0; i < h->clickCount; ++i)
+        assert(h->clicks[i].frame == expected[i]);
+    assert(h->eventCount == 4);
+    for (unsigned i = 0; i < h->eventCount; ++i)
+        assert(h->events[i].number == i + 1 && h->events[i].beat == i);
+    destroy(h);
+}
+static void sparseGapBars(void) {
+    FDMConfig c = config(); c.subdivisions = -2; c.gap = 1; c.gapBars = 1;
+    Harness *h = create(c);
+    advance(h, 192001, true);
+    assert(h->eventCount == 9 && h->clickCount == 2);
+    assert(h->clicks[0].frame == 0 && h->clicks[1].frame == 192000);
+    for (unsigned i = 0; i < h->eventCount; ++i) {
+        assert(h->events[i].gapBarsRemaining == (i >= 4 && i < 8 ? 1 : 0));
+        assert(h->events[i].cycleBar == (i / 4) % 2);
+    }
+    destroy(h);
+}
 int main(void) {
     nextBeatAndBar(); finishCurrentSubdivision(); gapCountdown();
     editsDuringGap(); gapEditAtBar(); randomWholeBars();
     fractionalClock(); stalledUIAndRestart(); coalescedEdits(); concurrentControls(); barSequencePositions();
     cappedMeter();
-    puts("Transport: 12 regression scenarios passed.");
+    sparseNoteModes(); sparseOddMeter(); sparseLiveChanges(); sparseGapBars();
+    puts("Transport: 16 regression scenarios passed.");
     return 0;
 }
 

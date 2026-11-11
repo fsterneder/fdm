@@ -143,7 +143,7 @@ final class Metronome: ObservableObject {
             savedBars: defaults.object(forKey: "gapBars") as? Int,
             legacyBeats: defaults.object(forKey: "gapLength") as? Int,
             beatsPerBar: pattern.beats)
-        subdivisions = min(4, max(1, defaults.integer(forKey: "subdivisions")))
+        subdivisions = Subdivision.restored(defaults.integer(forKey: "subdivisions"))
         sound = min(ClickVoice.allCases.count - 1, max(0, defaults.integer(forKey: "sound")))
         let savedVolume = min(1, max(0, defaults.double(forKey: "volume")))
         volume = savedVolume

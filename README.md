@@ -29,6 +29,8 @@ Completed beats stay filled. With Accent enabled, the first indicator uses the P
 
 Tempo, sound, accent, and subdivision changes take effect on the next beat. Beats per bar and gap changes take effect on the next bar, without restarting playback.
 
+Subdivision includes **1/1** (one click every four beats) and **1/2** (every two), followed by 1/4, 1/8, triplets, and 1/16. Beat lights always advance on every beat.
+
 ## Gap practice
 
 Play 1, 2, or 4 audible bars, then 1–8 silent bars. **Random** chooses a fresh audible run length each cycle. The Gap value always shows the selected interval; the dot row shows progress through audible and silent bars.

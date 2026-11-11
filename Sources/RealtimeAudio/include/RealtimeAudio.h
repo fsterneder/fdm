@@ -5,7 +5,9 @@
 
 typedef struct FDMEngine FDMEngine;
 typedef struct {
-    uint32_t bpm, beats, subdivisions, voice;
+    uint32_t bpm, beats;
+    int32_t subdivisions; /* -2 whole, -1 half, 1 quarter, 2 eighth, 3 triplet, 4 sixteenth */
+    uint32_t voice;
     bool accent;
     int32_t gap;
     uint32_t gapBars;

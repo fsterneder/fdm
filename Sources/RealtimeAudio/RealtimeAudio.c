@@ -39,7 +39,8 @@ static uint32_t bound(uint32_t x, uint32_t lo, uint32_t hi) {
 static FDMConfig sanitized(FDMConfig c) {
     c.bpm = bound(c.bpm, 30, 252);
     c.beats = bound(c.beats, 1, 7);
-    c.subdivisions = bound(c.subdivisions, 1, 4);
+    if (c.subdivisions != -2 && c.subdivisions != -1 &&
+        (c.subdivisions < 1 || c.subdivisions > 4)) c.subdivisions = 1;
     c.voice = bound(c.voice, 0, VOICES - 1);
     c.gapBars = bound(c.gapBars, 1, 8);
     if (c.gap != -1 && c.gap != 0 && c.gap != 1 && c.gap != 2 && c.gap != 4) c.gap = 0;
@@ -48,15 +49,17 @@ static FDMConfig sanitized(FDMConfig c) {
 static uint64_t pack(FDMConfig c) {
     c = sanitized(c);
     uint64_t gap = c.gap == -1 ? 7 : (uint64_t)c.gap;
+    uint64_t subdivision = c.subdivisions < 0 ? (uint64_t)(4 - c.subdivisions) : (uint64_t)c.subdivisions;
     return (uint64_t)c.bpm | ((uint64_t)c.beats << 8) |
-        ((uint64_t)c.subdivisions << 12) | ((uint64_t)c.voice << 15) |
+        (subdivision << 12) | ((uint64_t)c.voice << 15) |
         ((uint64_t)c.accent << 18) | (gap << 19) | ((uint64_t)c.gapBars << 22);
 }
 static FDMConfig unpack(uint64_t p) {
     uint32_t gap = (uint32_t)((p >> 19) & 7);
+    int32_t subdivision = (int32_t)((p >> 12) & 7);
     FDMConfig c = {
         .bpm = (uint32_t)(p & 255), .beats = (uint32_t)((p >> 8) & 15),
-        .subdivisions = (uint32_t)((p >> 12) & 7), .voice = (uint32_t)((p >> 15) & 7),
+        .subdivisions = subdivision > 4 ? 4 - subdivision : subdivision, .voice = (uint32_t)((p >> 15) & 7),
         .accent = ((p >> 18) & 1) != 0, .gap = gap == 7 ? -1 : (int32_t)gap,
         .gapBars = (uint32_t)((p >> 22) & 15)
     };
@@ -187,10 +190,15 @@ void FDMEngineRender(FDMEngine *e, float *output, uint32_t frames, uint64_t host
             if (!e->subdivision)
                 beginBeat(e, hostTime + (uint64_t)llround((double)i * hostTicksPerFrame));
             uint32_t kind = e->subdivision ? 2 : (e->active.accent && !e->beat ? 0 : 1);
-            e->clip = e->silent ? NULL : &e->clips[e->active.voice][kind];
+            uint32_t divisions = e->active.subdivisions > 0 ? (uint32_t)e->active.subdivisions : 1;
+            uint32_t beatInterval = e->active.subdivisions == -2 ? 4 : (e->active.subdivisions == -1 ? 2 : 1);
+            // Keep publishing every beat, even when only every second/fourth beat sounds.
+            // Use the continuous beat count so the note duration survives odd meters and gaps.
+            bool soundBeat = (e->number - 1) % beatInterval == 0;
+            e->clip = e->silent || !soundBeat ? NULL : &e->clips[e->active.voice][kind];
             e->clipPosition = 0;
-            e->nextFrame += e->sampleRate * 60.0 / e->active.bpm / e->active.subdivisions;
-            if (++e->subdivision == e->active.subdivisions) {
+            e->nextFrame += e->sampleRate * 60.0 / e->active.bpm / divisions;
+            if (++e->subdivision == divisions) {
                 e->subdivision = 0;
                 if (++e->beat == e->active.beats) e->beat = 0;
             }

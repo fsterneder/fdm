@@ -13,7 +13,7 @@ struct PlaybackConfiguration {
     var gapBars: Int
 
     var raw: FDMConfig {
-        FDMConfig(bpm: UInt32(bpm), beats: UInt32(beats), subdivisions: UInt32(subdivisions),
+        FDMConfig(bpm: UInt32(bpm), beats: UInt32(beats), subdivisions: Int32(subdivisions),
                   voice: UInt32(voice), accent: accent, gap: Int32(gap), gapBars: UInt32(gapBars))
     }
     init(bpm: Int, beats: Int, subdivisions: Int, voice: Int, accent: Bool, gap: Int, gapBars: Int) {

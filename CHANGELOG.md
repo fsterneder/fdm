@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.0
+
+- Add 1/1 and 1/2 note modes: click every four or two beats while all visual beats continue.
+- Keep note spacing continuous across odd meters and gap bars, with live changes at the next beat.
+- Preserve existing subdivision preferences and extend the drag selector to the new note values.
+
 ## 0.16.11
 
 - Reduce the main window’s width and horizontal control spacing while retaining the four-beat alignment and text sizes.
