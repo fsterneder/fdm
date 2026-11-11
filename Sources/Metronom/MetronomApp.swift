@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import AVFoundation
 import Darwin
 import TempoCore
@@ -7,10 +8,11 @@ import TempoCore
 @MainActor
 struct MetronomApp: App {
     @StateObject private var model = Metronome()
+    @StateObject private var windows = WindowModes()
     var body: some Scene {
         WindowGroup("Metronom") {
-            InstrumentView(model: model)
-                .onDisappear { model.stop() }
+            InstrumentView(model: model, showWidget: { windows.showWidget() })
+                .background(WindowBridge(windows: windows, model: model))
         }
         .windowResizability(.contentSize)
         .commands {
@@ -19,6 +21,10 @@ struct MetronomApp: App {
                 Button("Tap Tempo") { model.tap() }.keyboardShortcut("t", modifiers: [])
                 Button("Faster") { model.bpm += 1 }.keyboardShortcut(.upArrow, modifiers: [])
                 Button("Slower") { model.bpm -= 1 }.keyboardShortcut(.downArrow, modifiers: [])
+            }
+            CommandGroup(after: .windowArrangement) {
+                Button("Toggle Widget Mode") { windows.toggle() }
+                    .keyboardShortcut("m", modifiers: [.command, .shift])
             }
         }
     }
@@ -142,6 +148,7 @@ final class Metronome: ObservableObject {
 @MainActor
 struct InstrumentView: View {
     @ObservedObject var model: Metronome
+    var showWidget: () -> Void
     @State private var dialStart: Int?
     private let lcd = Color(red: 0.70, green: 0.77, blue: 0.61)
     var body: some View {
@@ -149,6 +156,11 @@ struct InstrumentView: View {
             HStack {
                 Text("METRONOM").font(.system(size: 17, weight: .black, design: .rounded)).tracking(4)
                 Spacer()
+                Button(action: showWidget) {
+                    Image(systemName: "pip.enter")
+                }
+                .help("Widget mode (⇧⌘M)")
+                .accessibilityLabel("Enter widget mode")
                 Circle().fill(model.playing ? Color.orange : Color.white.opacity(0.15)).frame(width: 8, height: 8)
             }
             VStack(spacing: 8) {
@@ -223,5 +235,134 @@ struct InstrumentView: View {
         .alert("Audio unavailable", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
             Button("OK") { model.error = nil }
         } message: { Text(model.error ?? "") }
+    }
+}
+
+
+// Intercept Space before focused buttons consume it as their activation key.
+// This monitor is local to this app and does not require accessibility permission.
+@MainActor
+final class WindowModes: ObservableObject {
+    private weak var mainWindow: NSWindow?
+    private weak var model: Metronome?
+    private var widget: TempoPanel?
+    private var keyMonitor: Any?
+    private var closeObserver: NSObjectProtocol?
+
+    func attach(window: NSWindow, model: Metronome) {
+        guard mainWindow !== window else { return }
+        mainWindow = window
+        self.model = model
+        if let closeObserver { NotificationCenter.default.removeObserver(closeObserver) }
+        closeObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification, object: window, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.model?.stop()
+                self?.widget?.orderOut(nil)
+            }
+        }
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self,
+                  event.window === self.mainWindow || event.window === self.widget,
+                  event.keyCode == 49,
+                  event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
+            else { return event }
+            if !event.isARepeat { self.model?.toggle() }
+            return nil
+        }
+    }
+
+    func toggle() {
+        if widget?.isVisible == true { showInstrument() } else { showWidget() }
+    }
+
+    func showWidget() {
+        guard let model, let mainWindow else { return }
+        if widget == nil {
+            let panel = TempoPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 160, height: 88),
+                styleMask: [.borderless], backing: .buffered, defer: false
+            )
+            panel.title = "Metronom Tempo"
+            panel.level = .floating
+            panel.hidesOnDeactivate = false
+            panel.isMovableByWindowBackground = true
+            panel.isReleasedWhenClosed = false
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            panel.backgroundColor = NSColor(calibratedWhite: 0.10, alpha: 1)
+            panel.hasShadow = true
+            panel.contentView = NSHostingView(rootView: TempoWidget(
+                model: model, showInstrument: { [weak self] in self?.showInstrument() }
+            ))
+            widget = panel
+            let topLeft = NSPoint(x: mainWindow.frame.minX, y: mainWindow.frame.maxY)
+            panel.setFrameTopLeftPoint(topLeft)
+        }
+        mainWindow.orderOut(nil)
+        widget?.makeKeyAndOrderFront(nil)
+    }
+
+    func showInstrument() {
+        widget?.orderOut(nil)
+        mainWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+}
+
+@MainActor
+final class TempoPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+}
+
+@MainActor
+struct TempoWidget: View {
+    @ObservedObject var model: Metronome
+    var showInstrument: () -> Void
+    var body: some View {
+        Text(String(model.bpm))
+            .font(.system(size: 52, weight: .medium, design: .monospaced))
+            .monospacedDigit()
+            .foregroundColor(Color(red: 0.70, green: 0.77, blue: 0.61))
+            .frame(width: 160, height: 88)
+            .background(Color(white: 0.10))
+            .contentShape(Rectangle())
+            .contextMenu {
+                Button(model.playing ? "Stop" : "Start") { model.toggle() }
+                Button("Tap Tempo") { model.tap() }
+                Divider()
+                Button("Show Full Metronome") { showInstrument() }
+                    .keyboardShortcut("m", modifiers: [.command, .shift])
+            }
+            .help("Drag to move. Right-click for controls or to return to the full metronome. Space starts or stops when focused.")
+            .accessibilityLabel("Tempo")
+            .accessibilityValue("\(model.bpm) beats per minute")
+            .accessibilityAdjustableAction { direction in
+                model.bpm += direction == .increment ? 1 : -1
+            }
+            .preferredColorScheme(.dark)
+    }
+}
+
+@MainActor
+struct WindowBridge: NSViewRepresentable {
+    let windows: WindowModes
+    let model: Metronome
+    func makeNSView(context: Context) -> WindowAttachment {
+        let view = WindowAttachment()
+        view.onWindow = { window in windows.attach(window: window, model: model) }
+        return view
+    }
+    func updateNSView(_ nsView: WindowAttachment, context: Context) {}
+}
+
+@MainActor
+final class WindowAttachment: NSView {
+    var onWindow: ((NSWindow) -> Void)?
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if let window { onWindow?(window) }
     }
 }
