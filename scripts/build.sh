@@ -24,14 +24,16 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>fdm-3</string>
 <key>CFBundleIconFile</key><string>AppIcon.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.9.0</string>
-<key>CFBundleVersion</key><string>14</string>
+<key>CFBundleShortVersionString</key><string>0.9.1</string>
+<key>CFBundleVersion</key><string>15</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
-cp Assets/AppIcon.png "$app/Contents/Resources/AppIcon.png"
-xcrun swift scripts/make-icon.swift Assets/AppIcon.png "$app/Contents/Resources/AppIcon.icns"
+icon_builder="$(mktemp -d)"
+trap 'rm -rf "$icon_builder"' EXIT
+xcrun swiftc -parse-as-library -framework AppKit Sources/Metronom/InstrumentIcon.swift scripts/make-icon.swift -o "$icon_builder/make-icon"
+"$icon_builder/make-icon" "$app/Contents/Resources/AppIcon.icns"
 /usr/bin/sips -g format "$app/Contents/Resources/AppIcon.icns" >/dev/null
 codesign --force --deep --sign - "$app"
 touch "$app"
@@ -40,6 +42,6 @@ registrar="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchSe
 if [[ -x "$registrar" ]]; then
   "$registrar" -f "$app" || echo "Launch Services will refresh the icon when the app is opened." >&2
 fi
-ditto -c -k --sequesterRsrc --keepParent "$app" dist/fdm-3-0.9.0.zip
+ditto -c -k --sequesterRsrc --keepParent "$app" dist/fdm-3-0.9.1.zip
 echo "Built $PWD/$app"
 echo "Run it: open dist/fdm-3.app"

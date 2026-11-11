@@ -334,47 +334,19 @@ extension EnvironmentValues {
 @MainActor
 private enum ThemedDockIcon {
     static func apply(_ theme: InstrumentTheme) {
-        // Capture colors before AppKit calls the resolution-independent drawing handler.
         let palette = theme.palette
-        let background = NSColor(palette.background)
-        let frame = NSColor(palette.tempo)
-        let pendulum = NSColor(palette.neutral)
-        let image = NSImage(size: NSSize(width: 1024, height: 1024), flipped: false) { bounds in
-            // Draw in the actual requested bounds; never assume a bitmap's backing scale.
-            let sx = bounds.width / 1024
-            let sy = bounds.height / 1024
-            func point(_ x: CGFloat, _ y: CGFloat) -> NSPoint {
-                NSPoint(x: bounds.minX + x * sx, y: bounds.minY + y * sy)
-            }
-            let tileRect = NSRect(x: bounds.minX + 64 * sx, y: bounds.minY + 64 * sy,
-                                  width: 896 * sx, height: 896 * sy)
-            background.setFill()
-            NSBezierPath(roundedRect: tileRect, xRadius: 180 * sx, yRadius: 180 * sy).fill()
-
-            let body = NSBezierPath()
-            body.move(to: point(160, 196))
-            body.line(to: point(376, 790))
-            body.line(to: point(648, 790))
-            body.line(to: point(864, 196))
-            body.close()
-            body.lineWidth = 40 * min(sx, sy)
-            frame.setStroke()
-            body.stroke()
-
-            // Three quarters of the display animation's 0.5-radian rightward swing.
-            // The lower endpoint floats above the base with a visible gap.
-            let angle = 0.5 * 0.75
-            let arm = NSBezierPath()
-            arm.move(to: point(512, 280))
-            arm.line(to: point(512 + CGFloat(sin(angle) * 630),
-                              280 + CGFloat(cos(angle) * 630)))
-            arm.lineWidth = 44 * min(sx, sy)
-            pendulum.setStroke()
-            arm.stroke()
-            return true
+        let colors: InstrumentIconColors
+        if theme == .charcoal {
+            colors = .defaultTheme
+        } else {
+            colors = InstrumentIconColors(
+                background: NSColor(palette.background), neutral: NSColor(palette.neutral),
+                tempo: NSColor(palette.tempo), playingBeat: NSColor(palette.playingBeat),
+                action: NSColor(palette.action), actionForeground: NSColor(palette.activeForeground),
+                lcdBackground: NSColor(palette.background), lcdInk: NSColor(palette.neutral)
+            )
         }
-        image.isTemplate = false
-        NSApp.applicationIconImage = image
+        NSApp.applicationIconImage = InstrumentIconArtwork.make(colors: colors)
     }
 }
 
@@ -385,7 +357,7 @@ struct InstrumentButtonStyle: ButtonStyle {
     var radius: CGFloat = 10
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundColor(accent ? palette.activeForeground : palette.action)
+            .foregroundColor(accent ? palette.activeForeground : palette.neutral)
             .background(
                 LinearGradient(
                     colors: accent ? [palette.action, palette.action] : [palette.controlTop, palette.controlBottom],
@@ -393,7 +365,7 @@ struct InstrumentButtonStyle: ButtonStyle {
                 ), in: RoundedRectangle(cornerRadius: radius)
             )
             .overlay(RoundedRectangle(cornerRadius: radius)
-                .strokeBorder(palette.action.opacity(accent ? 1 : 0.45), lineWidth: 1))
+                .strokeBorder(accent ? palette.action : palette.fieldBorder, lineWidth: 1))
             .shadow(color: palette.background.opacity(configuration.isPressed ? 0 : 0.3), radius: 2, y: 2)
             .brightness(configuration.isPressed ? -0.08 : 0)
             .offset(y: configuration.isPressed ? 1 : 0)
@@ -924,7 +896,7 @@ struct InstrumentView: View {
         Button { model.toggleMute() } label: {
             Image(systemName: model.volume == 0 ? "speaker.slash.fill" : "speaker.wave.2")
                 .font(.system(size: 17, weight: .medium))
-                .foregroundColor(palette.action)
+                .foregroundColor(palette.neutral)
                 .frame(width: 48, height: 48)
         }
         .buttonStyle(InstrumentButtonStyle(radius: 24))
@@ -946,12 +918,6 @@ struct InstrumentView: View {
 
     private var tempoDial: some View {
         ZStack {
-            ForEach(0..<31, id: \.self) { index in
-                Capsule().fill(palette.neutral.opacity(index % 5 == 0 ? 0.32 : 0.10))
-                    .frame(width: 1.5, height: index % 5 == 0 ? 6 : 3)
-                    .offset(y: -66)
-                    .rotationEffect(.degrees(-135 + Double(index) * 9))
-            }
             Circle()
                 .fill(LinearGradient(colors: [palette.dialTop, palette.dialBottom],
                                      startPoint: .topLeading, endPoint: .bottomTrailing))
@@ -1017,7 +983,7 @@ struct InstrumentSettings: View {
                 Button { model.toggleMute() } label: {
                     Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
                         .font(.system(size: 12))
-                        .foregroundColor(palette.action)
+                        .foregroundColor(palette.neutral)
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)

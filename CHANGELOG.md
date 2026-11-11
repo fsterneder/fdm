@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.1
+
+- Replace the icon with the approved LCD, left wheel, and four-button layout.
+- Show two filled beat triangles and one empty triangle, with no numbers or labels.
+- Keep controls neutral except active Stop; use a square Stop symbol.
+- Use the same icon artwork for every theme in the Dock, and Default's sage LCD for Finder.
+- Generate the bundle icon from the same drawing as the Dock icon.
+- Remove tempo-wheel tick marks in both the app and icon.
+
 ## 0.9.0
 
 - Define six consistent color roles for every theme: background, neutral, tempo, beat, playing beat, and action.
