@@ -1,0 +1,12 @@
+name: macOS build
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Metronom-macOS
+          path: dist/Metronom-0.1.0.zip
