@@ -246,7 +246,7 @@ enum InstrumentTheme: String, CaseIterable {
     var palette: InstrumentPalette { InstrumentPalette(theme: self) }
 }
 
-// Themes share six color roles; Default retains its original monochrome LCD.
+// All themes use the same modern six-role color hierarchy.
 // The other surfaces, borders, and disabled states derive from these roles.
 private struct ThemeColors {
     let background: UInt32
@@ -261,7 +261,7 @@ struct InstrumentPalette {
     let theme: InstrumentTheme
     private var colors: ThemeColors {
         switch theme {
-        case .charcoal: return ThemeColors(background: 0x0E1011, neutral: 0xFFFFFF, tempo: 0xFF7D40, beat: 0xE3BC89, playingBeat: 0x8DBAB2, action: 0xFF7D40)
+        case .charcoal: return ThemeColors(background: 0x17191B, neutral: 0xF8F6F0, tempo: 0xF8F6F0, beat: 0xF8F6F0, playingBeat: 0xFF7D40, action: 0xFF7D40)
         case .dracula: return ThemeColors(background: 0x282A36, neutral: 0xF8F8F2, tempo: 0xBD93F9, beat: 0xFFB86C, playingBeat: 0x8BE9FD, action: 0x50FA7B)
         case .nord: return ThemeColors(background: 0x2E3440, neutral: 0xECEFF4, tempo: 0x88C0D0, beat: 0xB48EAD, playingBeat: 0x8FBCBB, action: 0xA3BE8C)
         case .gruvbox: return ThemeColors(background: 0x282828, neutral: 0xEBDBB2, tempo: 0xFABD2F, beat: 0xFE8019, playingBeat: 0x8EC07C, action: 0xB8BB26)
@@ -308,29 +308,11 @@ struct InstrumentPalette {
         }
         return contrast(colors.background) >= contrast(colors.neutral) ? background : neutral
     }
-    var controlTop: Color { theme == .charcoal ? color(0x3B3B3B) : surface(0.11) }
-    var controlBottom: Color { theme == .charcoal ? color(0x292929) : surface(0.07) }
+    var controlTop: Color { surface(0.12) }
+    var controlBottom: Color { controlTop }
     var recess: Color { surface(0.035) }
-    var fieldBorder: Color { neutral.opacity(0.22) }
-    var bodyColors: [Color] { theme == .charcoal ? [color(0x1B1E1F), background] : [background, background] }
-    // Default retains the original monochrome hardware LCD.
-    var lcdNeutral: Color { theme == .charcoal ? color(0x141F18) : neutral }
-    var lcdTempo: Color { theme == .charcoal ? lcdNeutral : tempo }
-    var lcdBeat: Color { theme == .charcoal ? lcdNeutral : beat }
-    var lcdPlayingBeat: Color { theme == .charcoal ? lcdNeutral : playingBeat }
-    var lcdGlass: [Color] {
-        if theme == .charcoal {
-            return [
-                Color(red: 0.64, green: 0.69, blue: 0.60),
-                Color(red: 0.71, green: 0.75, blue: 0.66),
-                Color(red: 0.63, green: 0.68, blue: 0.59)
-            ]
-        }
-        return [background, background]
-    }
-    var lcdBorder: Color { theme == .charcoal ? background.opacity(0.65) : neutral.opacity(0.45) }
-    var dialTop: Color { surface(0.14) }
-    var dialBottom: Color { surface(0.08) }
+    var fieldBorder: Color { neutral.opacity(0.12) }
+    var bodyColors: [Color] { [background, background] }
 }
 
 private struct InstrumentThemeKey: EnvironmentKey {
@@ -349,17 +331,11 @@ extension EnvironmentValues {
 private enum ThemedDockIcon {
     static func apply(_ theme: InstrumentTheme) {
         let palette = theme.palette
-        let colors: InstrumentIconColors
-        if theme == .charcoal {
-            colors = .defaultTheme
-        } else {
-            colors = InstrumentIconColors(
-                background: NSColor(palette.background), neutral: NSColor(palette.neutral),
-                tempo: NSColor(palette.tempo), playingBeat: NSColor(palette.playingBeat),
-                action: NSColor(palette.action), actionForeground: NSColor(palette.activeForeground),
-                lcdBackground: NSColor(palette.background), lcdInk: NSColor(palette.neutral)
-            )
-        }
+        let colors = InstrumentIconColors(
+            background: NSColor(palette.background),
+            neutral: NSColor(palette.neutral),
+            playingBeat: NSColor(palette.playingBeat)
+        )
         NSApp.applicationIconImage = InstrumentIconArtwork.make(colors: colors)
     }
 }
@@ -380,256 +356,11 @@ struct InstrumentButtonStyle: ButtonStyle {
             )
             .overlay(RoundedRectangle(cornerRadius: radius)
                 .strokeBorder(accent ? palette.action : palette.fieldBorder, lineWidth: 1))
-            .shadow(color: palette.background.opacity(configuration.isPressed ? 0 : 0.3), radius: 2, y: 2)
             .brightness(configuration.isPressed ? -0.08 : 0)
-            .offset(y: configuration.isPressed ? 1 : 0)
     }
 }
 
-// Vector LCD digits keep the hardware's segment proportions at every scale.
-private enum LCDSegments {
-    // Segments: top, upper-right, lower-right, bottom, lower-left, upper-left, middle.
-    static let numbers: [[Int]] = [
-        [0,1,2,3,4,5], [1,2], [0,1,6,4,3], [0,1,6,2,3], [5,6,1,2],
-        [0,5,6,2,3], [0,5,6,4,2,3], [0,1,2], [0,1,2,3,4,5,6], [0,1,2,3,5,6]
-    ]
-    // Every segment is 8 units thick with a consistent gap at each diagonal join.
-    // Mirror the same geometry instead of drawing seven slightly different polygons.
-    private static func horizontal(y: CGFloat) -> [CGPoint] {
-        [CGPoint(x: 8, y: y), CGPoint(x: 32, y: y),
-         CGPoint(x: 36, y: y + 4), CGPoint(x: 32, y: y + 8),
-         CGPoint(x: 8, y: y + 8), CGPoint(x: 4, y: y + 4)]
-    }
-    private static let upperLeft: [CGPoint] = [
-        CGPoint(x: 0, y: 9), CGPoint(x: 4, y: 5), CGPoint(x: 8, y: 9),
-        CGPoint(x: 8, y: 33), CGPoint(x: 4, y: 37), CGPoint(x: 0, y: 33)
-    ]
-    static let polygons: [[CGPoint]] = [
-        horizontal(y: 0),
-        upperLeft.map { CGPoint(x: 40 - $0.x, y: $0.y) },
-        upperLeft.map { CGPoint(x: 40 - $0.x, y: 76 - $0.y) },
-        horizontal(y: 68),
-        upperLeft.map { CGPoint(x: $0.x, y: 76 - $0.y) },
-        upperLeft,
-        horizontal(y: 34)
-    ]
-    static func path(digit: Int, origin: CGPoint, height: CGFloat, widthScale: CGFloat = 1) -> Path {
-        var path = Path()
-        let scale = height / 76
-        for segment in numbers[min(9, max(0, digit))] {
-            let points = polygons[segment].map { point in
-                CGPoint(x: origin.x + point.x * scale * widthScale,
-                        y: origin.y + point.y * scale)
-            }
-            path.addLines(points)
-            path.closeSubpath()
-        }
-        return path
-    }
-}
-
-private enum LCDGeometry {
-    static let size = CGSize(width: 280, height: 124)
-    static let mainHeight: CGFloat = 284 * size.height / size.width
-    static let widgetDisplayWidth: CGFloat = 168
-    static let widgetDisplayHeight = widgetDisplayWidth * size.height / size.width
-    static let widgetWidth = widgetDisplayWidth + 56 // padding, control strip, and gap
-    static let widgetHeight = widgetDisplayHeight + 16
-}
-
-@MainActor
-struct HardwareLCD: View {
-    @ObservedObject var model: Metronome
-    @State private var editingTempo = false
-    var body: some View {
-        // Capture UI state before entering the drawing closures.
-        let theme = model.theme
-        let palette = theme.palette
-        let ink = palette.lcdTempo
-        let beatInk = palette.lcdBeat
-        let labelInk = palette.lcdNeutral
-        let markerInk = palette.lcdPlayingBeat
-        let pendulumInk = palette.lcdNeutral
-        let noteInk = palette.lcdNeutral
-        let gapInk = palette.lcdNeutral
-        let borderInk = palette.lcdBorder
-        let captionCapHeight = NSFont.systemFont(ofSize: 12.5, weight: .semibold).capHeight
-        let tripletCapHeight = NSFont.systemFont(ofSize: 7.5, weight: .semibold).capHeight
-        let bpm = model.bpm
-        let subdivisions = model.subdivisions
-        let beats = model.beats
-        let playing = model.playing
-        let currentBeat = model.currentBeat
-        let beatTime = model.beatTime
-        let beatNumber = model.beatNumber
-        let inSilentBar = model.inSilentBar
-        let hideTempoDigits = editingTempo
-        let logical = LCDGeometry.size
-
-        return TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !playing)) { timeline in
-            Canvas { context, size in
-                // The same coordinate system, including glass, border, and symbols,
-                // is uniformly scaled in the instrument and floating widget.
-                let scale = min(size.width / logical.width, size.height / logical.height)
-                context.translateBy(x: (size.width - logical.width * scale) / 2,
-                                    y: (size.height - logical.height * scale) / 2)
-                context.scaleBy(x: scale, y: scale)
-                let rect = CGRect(origin: .zero, size: logical)
-                let glass = Path(roundedRect: rect, cornerRadius: 9)
-                context.fill(glass, with: .linearGradient(
-                    Gradient(colors: palette.lcdGlass), startPoint: .zero,
-                    endPoint: CGPoint(x: logical.width, y: logical.height)
-                ))
-                let border = Path(roundedRect: rect.insetBy(dx: 1, dy: 1), cornerRadius: 8)
-                context.stroke(border, with: .color(borderInk),
-                               lineWidth: 2)
-
-                func label(_ text: String, x: CGFloat, y: CGFloat, size: CGFloat = 10, tint: Color? = nil) {
-                    let resolved = context.resolve(Text(text).font(.system(size: size, weight: .semibold))
-                        .foregroundColor(tint ?? labelInk))
-                    let baseline = resolved.firstBaseline(in: CGSize(width: 1000, height: 1000))
-                    let capHeight = size == 12.5 ? captionCapHeight : tripletCapHeight
-                    // Place the visible capitals at the measured coordinate, not the font's line box.
-                    context.draw(resolved, at: CGPoint(x: x, y: y - baseline + capHeight), anchor: .topLeading)
-                }
-                func number(_ value: Int, places: Int, x: CGFloat, y: CGFloat, height: CGFloat, widthScale: CGFloat = 1.12, tint: Color? = nil) {
-                    let chars = Array(String(value))
-                    let advance = height * (46.0 / 76.0) * widthScale
-                    for index in 0..<places {
-                        let source = index - (places - chars.count)
-                        if source >= 0, source < chars.count, let digit = chars[source].wholeNumberValue {
-                            context.fill(LCDSegments.path(digit: digit,
-                                origin: CGPoint(x: x + CGFloat(index) * advance, y: y),
-                                height: height, widthScale: widthScale), with: .color(tint ?? ink))
-                        }
-                    }
-                }
-
-                // Positions measured from the approved shared-LCD mockup.
-                // The extra inset at 200+ protects TEMPO from the leading digit.
-                let tempoX: CGFloat = bpm >= 200 ? 62 : 52
-                if !hideTempoDigits { number(bpm, places: 3, x: tempoX, y: 12, height: 58) }
-                number(beats, places: 1, x: 232.46, y: 11.65, height: 60.75, widthScale: 1.036, tint: beatInk)
-                label("TEMPO", x: 17, y: 51.2, size: 12.5)
-                label("BEAT", x: 187.7, y: 51.5, size: 12.5)
-                // GAP replaces notation during the silent bar, without changing the selected subdivision.
-                if inSilentBar {
-                    label("GAP", x: 232, y: 93, size: 12.5, tint: gapInk)
-                } else {
-                    // Subdivision notation shares the bottom baseline with beat markers.
-                    let stems: [CGFloat] = subdivisions == 1 ? [251] : (subdivisions == 3 ? [236, 248.5, 261] : [239, 261])
-                    for x in stems {
-                        context.fill(Path(ellipseIn: CGRect(x: x - 8, y: 104.5, width: 9, height: 6)),
-                                     with: .color(noteInk))
-                        var stem = Path()
-                        stem.move(to: CGPoint(x: x, y: 107))
-                        stem.addLine(to: CGPoint(x: x, y: 86))
-                        context.stroke(stem, with: .color(noteInk), lineWidth: 1.7)
-                    }
-                    if subdivisions > 1, let first = stems.first, let last = stems.last {
-                        context.fill(Path(CGRect(x: first, y: 84, width: last - first + 1, height: 3)),
-                                     with: .color(noteInk))
-                        if subdivisions == 4 {
-                            context.fill(Path(CGRect(x: first, y: 90, width: last - first + 1, height: 3)),
-                                         with: .color(noteInk))
-                        }
-                        if subdivisions == 3 { label("3", x: 246, y: 74, size: 7.5, tint: noteInk) }
-                    }
-                }
-
-                // Tapered case with rounded corners, matching the approved symbol mockup.
-                var metronomeCase = Path()
-                metronomeCase.move(to: CGPoint(x: 23.6, y: 82.5))
-                metronomeCase.addLine(to: CGPoint(x: 29.4, y: 82.5))
-                metronomeCase.addQuadCurve(to: CGPoint(x: 31.1, y: 84.1), control: CGPoint(x: 30.8, y: 82.5))
-                metronomeCase.addLine(to: CGPoint(x: 38.3, y: 108.6))
-                metronomeCase.addQuadCurve(to: CGPoint(x: 36.8, y: 110.5), control: CGPoint(x: 38.9, y: 110.5))
-                metronomeCase.addLine(to: CGPoint(x: 16.2, y: 110.5))
-                metronomeCase.addQuadCurve(to: CGPoint(x: 14.7, y: 108.6), control: CGPoint(x: 14.1, y: 110.5))
-                metronomeCase.addLine(to: CGPoint(x: 21.9, y: 84.1))
-                metronomeCase.addQuadCurve(to: CGPoint(x: 23.6, y: 82.5), control: CGPoint(x: 22.2, y: 82.5))
-                metronomeCase.closeSubpath()
-                context.stroke(metronomeCase, with: .color(pendulumInk), lineWidth: 1.6)
-
-                let elapsed = max(0, timeline.date.timeIntervalSinceReferenceDate - beatTime)
-                let phase = min(1, elapsed / (60 / Double(bpm)))
-                let direction: Double = beatNumber.isMultiple(of: 2) ? -1 : 1
-                let angle = playing && beatTime > 0 ? direction * cos(phase * .pi) * 0.35 : 0
-                let pivot = CGPoint(x: 26.5, y: 103)
-                var pendulum = Path()
-                pendulum.move(to: pivot)
-                pendulum.addLine(to: CGPoint(x: pivot.x + sin(angle) * 13.5,
-                                             y: pivot.y - cos(angle) * 13.5))
-                context.stroke(pendulum, with: .color(pendulumInk), lineWidth: 1.6)
-                context.fill(Path(ellipseIn: CGRect(x: pivot.x - 2.3, y: pivot.y - 2.3,
-                                                    width: 4.6, height: 4.6)),
-                             with: .color(pendulumInk))
-
-                let count = max(1, beats)
-                let step = min(CGFloat(37.25), CGFloat(158) / CGFloat(count))
-                let markerWidth = min(CGFloat(21), step - 4)
-                let timeSinceBeat = max(0, timeline.date.timeIntervalSinceReferenceDate - beatTime)
-                let pulseDuration = min(0.14, (60 / Double(bpm)) * 0.45)
-                let pulseVisible = playing && currentBeat >= 0 && timeSinceBeat < pulseDuration
-                for index in 0..<count {
-                    let x = 134 + (CGFloat(index) - CGFloat(count - 1) / 2) * step - markerWidth / 2
-                    var triangle = Path()
-                    triangle.move(to: CGPoint(x: x, y: 84.5))
-                    triangle.addLine(to: CGPoint(x: x + markerWidth, y: 97.25))
-                    triangle.addLine(to: CGPoint(x: x, y: 110))
-                    triangle.closeSubpath()
-                    let filled = beats == 0
-                        ? pulseVisible : (playing && currentBeat >= 0 && index <= currentBeat)
-                    if filled { context.fill(triangle, with: .color(markerInk)) }
-                    context.stroke(triangle, with: .color(filled ? markerInk : labelInk), lineWidth: 1.7)
-                }
-            }
-        }
-        .overlay {
-            GeometryReader { geometry in
-                let scale = min(geometry.size.width / logical.width, geometry.size.height / logical.height)
-                let offset = CGPoint(x: (geometry.size.width - logical.width * scale) / 2,
-                                     y: (geometry.size.height - logical.height * scale) / 2)
-                let target = CGRect(x: 49, y: 8, width: 130, height: 68)
-                Group {
-                    if editingTempo {
-                        InlineTempoField(
-                            bpm: bpm, color: ink, fontSize: 58 * scale,
-                            onSet: { value in
-                                model.bpm = value
-                                editingTempo = false
-                                model.editingTempo = false
-                            },
-                            onCancel: {
-                                editingTempo = false
-                                model.editingTempo = false
-                            }
-                        )
-                    } else {
-                        Button {
-                            model.editingTempo = true
-                            editingTempo = true
-                        } label: {
-                            Color.clear.contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .help("Click to edit tempo")
-                        .accessibilityLabel("Edit tempo")
-                        .accessibilityValue("\(bpm) beats per minute")
-                    }
-                }
-                .frame(width: target.width * scale, height: target.height * scale)
-                .position(x: offset.x + target.midX * scale, y: offset.y + target.midY * scale)
-            }
-        }
-        .onDisappear { model.editingTempo = false }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("LCD")
-        .accessibilityValue("\(bpm) beats per minute, \(beats == 0 ? "no accent" : "\(beats) beats per bar"), \(subdivisions) clicks per beat, \(playing ? (inSilentBar ? "silent practice bar" : "playing") : "stopped")")
-    }
-}
-
-// Native field overlays only the tempo digits; no popover or separate window.
+// Inline numeric entry shares the tempo readout's size, alignment, and weight.
 @MainActor
 struct InlineTempoField: NSViewRepresentable {
     let bpm: Int
@@ -645,11 +376,11 @@ struct InlineTempoField: NSViewRepresentable {
         field.isBezeled = false
         field.drawsBackground = false
         field.focusRingType = .none
-        field.alignment = .right
+        field.alignment = .center
         field.maximumNumberOfLines = 1
         field.formatter = TempoInputFormatter()
         field.cell?.isScrollable = true
-        field.font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .regular)
+        field.font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold)
         field.textColor = NSColor(color)
         field.delegate = context.coordinator
         field.setAccessibilityLabel("Tempo in beats per minute")
@@ -662,9 +393,9 @@ struct InlineTempoField: NSViewRepresentable {
     }
     func updateNSView(_ field: NSTextField, context: Context) {
         context.coordinator.parent = self
-        field.font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .regular)
+        field.font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold)
         field.textColor = NSColor(color)
-        // Preserve the user's draft while playback refreshes the LCD.
+        // Preserve the user's draft while playback refreshes the readout.
     }
 
     @MainActor
@@ -838,79 +569,60 @@ struct SubdivisionSelector: View {
 @MainActor
 struct InstrumentView: View {
     @ObservedObject var model: Metronome
-    private var palette: InstrumentPalette { model.theme.palette }
     var showWidget: () -> Void
-    @State private var dialStart: Int?
     @State private var showingSettings = false
-
+    private var palette: InstrumentPalette { model.theme.palette }
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 28) {
+            header
+            ModernReadout(model: model).frame(height: DisplayGeometry.mainHeight)
             HStack(spacing: 8) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("fdm-3")
-                        .foregroundColor(palette.action)
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .tracking(-0.5)
-                        .accessibilityLabel("fdm-3")
-                    Text("METRONOME").font(.system(size: 8, weight: .medium))
-                        .tracking(1.8).foregroundColor(palette.neutral.opacity(0.65))
+                Button { model.bpm = Tempo.clamp(model.bpm - 1) } label: {
+                    Image(systemName: "minus").frame(width: 24, height: 28)
                 }
-                Spacer(minLength: 8)
-                HStack(spacing: 6) {
-                    Button { model.tap() } label: {
-                        Text("TAP").font(.system(size: 8, weight: .bold))
-                            .frame(width: 28, height: 28)
-                    }
-                    .buttonStyle(InstrumentButtonStyle(radius: 14))
-                    .help("Tap tempo (T)")
-                    .accessibilityLabel("Tap tempo")
-
-                    Button { showingSettings.toggle() } label: {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 12, weight: .medium))
-                            .frame(width: 28, height: 28)
-                    }
-                    .buttonStyle(InstrumentButtonStyle(radius: 14))
-                    .help("Settings")
-                    .accessibilityLabel("Settings")
-                    .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
-                        InstrumentSettings(model: model)
-                            .environment(\.instrumentTheme, model.theme)
-                            .preferredColorScheme(model.theme.colorScheme)
-                    }
-
-                    Button(action: showWidget) {
-                        Image(systemName: "arrow.down.right.and.arrow.up.left")
-                            .font(.system(size: 12, weight: .medium))
-                            .frame(width: 28, height: 28)
-                    }
-                    .buttonStyle(InstrumentButtonStyle(radius: 14))
-                    .help("Switch to floating mini metronome (Tab or \\)")
-                    .accessibilityLabel("Enter widget mode")
+                .buttonStyle(.plain).foregroundColor(palette.neutral)
+                .help("Decrease tempo").accessibilityLabel("Decrease tempo")
+                Slider(value: Binding(
+                    get: { Double(model.bpm) },
+                    set: { value in
+                        let bpm = Tempo.clamp(Int(value.rounded()))
+                        if model.bpm != bpm { model.bpm = bpm }
+                    }), in: 30...252, step: 1)
+                    .tint(palette.tempo)
+                    .accessibilityLabel("Tempo")
+                    .accessibilityValue("\(model.bpm) beats per minute")
+                Button { model.bpm = Tempo.clamp(model.bpm + 1) } label: {
+                    Image(systemName: "plus").frame(width: 24, height: 28)
                 }
+                .buttonStyle(.plain).foregroundColor(palette.neutral)
+                .help("Increase tempo").accessibilityLabel("Increase tempo")
             }
-
-            HardwareLCD(model: model).frame(height: LCDGeometry.mainHeight)
-
-            HStack(spacing: 20) {
-                tempoDial
-                VStack(spacing: 12) {
-                    HStack(spacing: 12) {
-                        beatButton(delta: 1)
-                        muteButton
-                    }
-                    HStack(spacing: 12) {
-                        beatButton(delta: -1)
-                        transportButton
-                    }
+            .frame(height: 28)
+            HStack(spacing: 8) {
+                beatButton(delta: -1)
+                beatButton(delta: 1)
+                Button { model.toggleMute() } label: {
+                    Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
+                        .font(.system(size: 16)).frame(width: 44, height: 44)
                 }
+                .buttonStyle(InstrumentButtonStyle(radius: 10))
+                .help(model.volume == 0 ? "Unmute (M)" : "Mute (M)")
+                .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
+                Button { model.toggle() } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: model.playing ? "stop.fill" : "play.fill")
+                        Text(model.playing ? "Stop" : "Start")
+                    }
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(InstrumentButtonStyle(accent: true, radius: 10))
+                .help("Start / Stop (Space)")
+                .accessibilityLabel(model.playing ? "Stop metronome" : "Start metronome")
             }
-            .padding(.horizontal, 6)
-            .frame(maxWidth: .infinity)
         }
-        .padding(18).frame(width: 320)
-        .background(LinearGradient(colors: palette.bodyColors,
-                                  startPoint: .topLeading, endPoint: .bottomTrailing))
+        .padding(24).frame(width: 380)
+        .background(palette.background)
         .preferredColorScheme(model.theme.colorScheme)
         .alert("Audio unavailable", isPresented: Binding(
             get: { model.error != nil }, set: { if !$0 { model.error = nil } }
@@ -919,72 +631,46 @@ struct InstrumentView: View {
         } message: { Text(model.error ?? "") }
     }
 
-    private var muteButton: some View {
-        Button { model.toggleMute() } label: {
-            Image(systemName: model.volume == 0 ? "speaker.slash.fill" : "speaker.wave.2")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundColor(palette.neutral)
-                .frame(width: 48, height: 48)
+    private var header: some View {
+        HStack(spacing: 12) {
+            Text("fdm-3")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .tracking(-0.5).foregroundColor(palette.action)
+            Spacer(minLength: 8)
+            Button { model.tap() } label: {
+                Text("TAP").font(.system(size: 11, weight: .semibold)).frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain).foregroundColor(palette.neutral)
+            .help("Tap tempo (T)").accessibilityLabel("Tap tempo")
+            Button { showingSettings.toggle() } label: {
+                Image(systemName: "gearshape").font(.system(size: 17)).frame(width: 28, height: 32)
+            }
+            .buttonStyle(.plain).foregroundColor(palette.neutral)
+            .help("Settings").accessibilityLabel("Settings")
+            .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
+                InstrumentSettings(model: model)
+                    .environment(\.instrumentTheme, model.theme)
+                    .preferredColorScheme(model.theme.colorScheme)
+            }
+            Button(action: showWidget) {
+                Image(systemName: "arrow.down.right.and.arrow.up.left")
+                    .font(.system(size: 15)).frame(width: 28, height: 32)
+            }
+            .buttonStyle(.plain).foregroundColor(palette.neutral)
+            .help("Widget mode (Tab or \\)").accessibilityLabel("Enter widget mode")
         }
-        .buttonStyle(InstrumentButtonStyle(radius: 24))
-        .help(model.volume == 0 ? "Unmute (M)" : "Mute (M)")
-        .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
-        .accessibilityValue(model.volume == 0 ? "Muted" : "Volume \(Int(model.volume * 100)) percent")
+        .frame(height: 32)
     }
-
-    private var transportButton: some View {
-        Button { model.toggle() } label: {
-            Image(systemName: model.playing ? "stop.fill" : "play.fill")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(model.playing ? palette.activeForeground : palette.action)
-                .frame(width: 48, height: 48)
-        }
-        .buttonStyle(InstrumentButtonStyle(accent: model.playing, radius: 24))
-        .help(model.playing ? "Stop (Space)" : "Start (Space)")
-        .accessibilityLabel(model.playing ? "Stop metronome" : "Start metronome")
-    }
-
-    private var tempoDial: some View {
-        ZStack {
-            Circle()
-                .fill(LinearGradient(colors: [palette.dialTop, palette.dialBottom],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 120, height: 120)
-                .overlay(Circle().strokeBorder(palette.neutral.opacity(0.14)))
-                .shadow(color: palette.background.opacity(0.5), radius: 4, y: 4)
-            Capsule().fill(palette.tempo).frame(width: 6, height: 26)
-                .offset(y: -39)
-                .rotationEffect(.degrees(-135 + Double(model.bpm - 30) / 222 * 270))
-        }
-        .frame(width: 144, height: 144)
-        .contentShape(Circle())
-        .gesture(DragGesture(minimumDistance: 0).onChanged { value in
-            if dialStart == nil { dialStart = model.bpm }
-            model.bpm = Tempo.clamp((dialStart ?? model.bpm)
-                + Int((value.translation.width - value.translation.height) / 3))
-        }.onEnded { _ in dialStart = nil })
-        .accessibilityElement().accessibilityLabel("Tempo dial")
-        .accessibilityValue("\(model.bpm) beats per minute")
-        .accessibilityAdjustableAction { direction in
-            model.bpm += direction == .increment ? 1 : -1
-        }
-    }
-
     private func beatButton(delta: Int) -> some View {
         let atLimit = delta < 0 ? model.beats == 0 : model.beats == 9
-        return Button {
-            model.adjustBeats(by: delta)
-        } label: {
-            Image(systemName: "triangle.fill")
-                .font(.system(size: 15, weight: .regular))
-                .rotationEffect(.degrees(delta > 0 ? 0 : 180))
-                .frame(width: 48, height: 48)
+        return Button { model.adjustBeats(by: delta) } label: {
+            Image(systemName: delta < 0 ? "chevron.down" : "chevron.up")
+                .font(.system(size: 15, weight: .medium)).frame(width: 44, height: 44)
         }
-        .buttonStyle(InstrumentButtonStyle(radius: 24))
-        .disabled(atLimit)
-        .opacity(atLimit ? 0.4 : 1)
-        .help(delta < 0 ? "Decrease beats per bar (Shift + ↓)" : "Increase beats per bar (Shift + ↑)")
-        .accessibilityLabel(delta < 0 ? "Decrease beats per bar" : "Increase beats per bar")
+        .buttonStyle(InstrumentButtonStyle(radius: 10))
+        .disabled(atLimit).opacity(atLimit ? 0.4 : 1)
+        .help(delta < 0 ? "Decrease beats (Shift + ↓)" : "Increase beats (Shift + ↑)")
+        .accessibilityLabel(delta < 0 ? "Decrease beats" : "Increase beats")
         .accessibilityValue(model.beats == 0 ? "No accent" : "\(model.beats) beats per bar")
     }
 }
@@ -1125,6 +811,10 @@ final class WindowModes: ObservableObject {
                 self.model?.bpm -= 10
             case 124: // Right
                 self.model?.bpm += 10
+            case 126: // Up
+                self.model?.bpm += 1
+            case 125: // Down
+                self.model?.bpm -= 1
             default:
                 return event
             }
@@ -1140,7 +830,7 @@ final class WindowModes: ObservableObject {
         guard let model, let mainWindow else { return }
         if widget == nil {
             let panel = TempoPanel(
-                contentRect: NSRect(x: 0, y: 0, width: LCDGeometry.widgetWidth, height: LCDGeometry.widgetHeight),
+                contentRect: NSRect(x: 0, y: 0, width: DisplayGeometry.widgetWidth, height: DisplayGeometry.widgetHeight),
                 styleMask: [.borderless], backing: .buffered, defer: false
             )
             panel.title = "fdm-3 Tempo"
@@ -1187,8 +877,8 @@ struct TempoWidget: View {
     var showInstrument: () -> Void
     var body: some View {
         HStack(spacing: 8) {
-            HardwareLCD(model: model)
-                .frame(width: LCDGeometry.widgetDisplayWidth, height: LCDGeometry.widgetDisplayHeight)
+            ModernReadout(model: model)
+                .frame(width: DisplayGeometry.widgetDisplayWidth, height: DisplayGeometry.widgetDisplayHeight)
             VStack(spacing: 6) {
                 Circle()
                     .fill(model.playing ? palette.action : palette.neutral.opacity(0.18))
@@ -1208,7 +898,7 @@ struct TempoWidget: View {
                 .accessibilityLabel("Return to full fdm-3 window")
             }
         }
-        .padding(.horizontal, 10).frame(width: LCDGeometry.widgetWidth, height: LCDGeometry.widgetHeight)
+        .padding(.horizontal, 10).frame(width: DisplayGeometry.widgetWidth, height: DisplayGeometry.widgetHeight)
         .background(LinearGradient(colors: palette.bodyColors,
                                   startPoint: .topLeading, endPoint: .bottomTrailing),
                     in: RoundedRectangle(cornerRadius: 13))
@@ -1224,7 +914,7 @@ struct TempoWidget: View {
             Button("Quit fdm-3") { model.stop(); NSApp.terminate(nil) }
         }
         .environment(\.instrumentTheme, model.theme)
-        .help("Drag to move. Click expand to return to fdm-3. Space starts or stops when focused.")
+        .help("Drag the background to move. Drag BPM up/down to adjust it. Click expand to return to fdm-3.")
         .preferredColorScheme(model.theme.colorScheme)
     }
 }

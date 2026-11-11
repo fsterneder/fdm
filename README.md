@@ -1,50 +1,35 @@
 # fdm-3
 
-A compact macOS metronome inspired by the Korg KDM-3.
+A compact macOS metronome with round beat lights, tap tempo, subdivisions, gap practice, five sounds, and IDE/Vim themes.
 
-30–252 BPM, tap tempo, subdivisions, five voices, IDE/Vim themes, and an always-on-top mini mode.
-
-<img src="docs/images/fdm-3.png" alt="fdm-3 in the Default theme" width="304">
+<img src="docs/images/fdm-3.svg" alt="Dracula interface preview" width="304">
 
 ## Build and run
 
 Requires macOS 13+ and Apple Command Line Tools with Swift 5.9+. Full Xcode is optional.
 
-Install the tools once:
-
 ```sh
 xcode-select --install
-```
-
-Then run from the project folder:
-
-```sh
 bash scripts/build.sh
 open dist/fdm-3.app
 ```
 
 ## Controls
 
-| Control | Action |
-| --- | --- |
-| Left dial / click BPM | Adjust tempo / type a value |
-| ▲ / ▼ | Change beats: No accent, then 2–9 |
-| Space | Start / stop |
-| T | Tap tempo |
-| ↑ / ↓ | Tempo ±1 BPM |
-| Shift + ↑ / ↓ | Increase / decrease beats |
-| ← / → | Tempo ±10 BPM |
-| Tab or &#92; | Toggle mini mode |
-| Speaker button / M | Mute / restore previous volume |
+- **BPM:** drag up/down to adjust, click to type, or use the slider. Range: 30–252.
+- **Beat arrows:** change beats (No Accent, then 2–9).
+- **Space:** Start/Stop. **T:** tap. **M:** mute.
+- **↑/↓:** tempo ±1. **←/→:** tempo ±10. **Shift + ↑/↓:** beats.
+- **Tab or &#92;:** switch to the floating widget.
 
-Use the gear button for Subdivision, Gap, Sound, Theme, and volume. Tap tempo is in the header; the four round buttons beside the wheel control beats, mute, and Start/Stop. Click the BPM digits to edit them in place. Return or clicking away applies the value; Escape cancels. Only digits are accepted (up to three); an empty field restores the previous tempo; values are limited to 30–252 BPM. The main window and widget share the same LCD layout: tempo, beat count, pendulum, beat indicators, gap status, and subdivision notes. Voice is no longer shown on either display. Default keeps the original green LCD and monochrome display. Other themes retain their tempo, beat, and playback colors. The logo and idle Start symbol use the playback accent; active Stop uses an accent fill. Regular buttons stay neutral. Beat indicators fill progressively through each bar. The icon mirrors the compact UI, with two filled beat indicators and one empty. The Dock icon follows the selected theme; Finder uses the Default icon. Settings are remembered. Closing the main window quits the app.
+Completed beats stay filled; the current beat uses the theme's highlight. No Accent flashes one light per beat. Subdivision and GAP share one slot. Settings hold Sound, Theme, Subdivision, Gap, and volume.
+
+Tempo entry accepts only up to three digits. Enter or clicking away applies it; Escape cancels. Closing the main window quits the app.
 
 ## Gap practice
 
-Play 1, 2, or 4 audible bars, then one silent bar. **Random** chooses a fresh audible run length each cycle, with equal probability. **Off** plays continuously.
+Play 1, 2, or 4 audible bars, then one silent bar. **Random** chooses a fresh audible run length each cycle with equal probability. No Accent uses four-beat bars.
 
-No accent uses four-beat bars for gap practice. The LCD shows **GAP** in place of the subdivision symbol during silence.
+The Dock icon follows the selected theme; Finder uses Default. Both use the same padded artwork.
 
----
-
-Homebrew installation is not published yet. See [CHANGELOG.md](CHANGELOG.md) for version history.
+Homebrew installation is not published yet. See [CHANGELOG.md](CHANGELOG.md).

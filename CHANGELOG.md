@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.0
+
+- Adopt the modern interface: ordinary typography, equal-width tempo and subdivision/GAP fields, and prominent round beat lights.
+- Keep completed beats filled and highlight the current beat; preserve the No Accent pulse.
+- Replace the wheel with a slider and direct BPM scrubbing: drag up to increase, down to decrease; click to type.
+- Preserve numeric entry, keyboard shortcuts, settings, sounds, and gap timing.
+- Use the same scaled readout in the main window and floating widget.
+- Replace the icon with the four-beat motif for every theme, with equal 100-pixel padding around an 824-pixel square tile.
+
 ## 0.9.4
 
 - Match the mockup's animated metronome symbol: a tapered case with rounded corners and a round pendulum pivot.

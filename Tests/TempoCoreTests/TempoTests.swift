@@ -1,6 +1,24 @@
 import XCTest
 @testable import TempoCore
 final class TempoTests: XCTestCase {
+    func testVerticalScrubFollowsMouseDirectionAndAccumulatesSmallMoves() {
+        var scrub = TempoScrubber(bpm: 120)
+        XCTAssertEqual(scrub.move(upwardPoints: 1), 120)
+        XCTAssertEqual(scrub.move(upwardPoints: 2), 121)
+        XCTAssertEqual(scrub.move(upwardPoints: 9), 124)
+        XCTAssertEqual(scrub.move(upwardPoints: -6), 122)
+    }
+    func testScrubReversesImmediatelyAfterHittingUpperBound() {
+        var scrub = TempoScrubber(bpm: 250)
+        XCTAssertEqual(scrub.move(upwardPoints: 300), 252)
+        XCTAssertEqual(scrub.move(upwardPoints: -3), 251)
+    }
+    func testScrubReversesImmediatelyAfterHittingLowerBound() {
+        var scrub = TempoScrubber(bpm: 31)
+        XCTAssertEqual(scrub.move(upwardPoints: -300), 30)
+        XCTAssertEqual(scrub.move(upwardPoints: 3), 31)
+    }
+
     func testTempoDraftAcceptsOnlyUpToThreeDigits() {
         for text in ["", "3", "30", "120", "252", "999", "030"] {
             XCTAssertTrue(Tempo.isValidDraft(text), text)
