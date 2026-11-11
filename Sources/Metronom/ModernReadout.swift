@@ -4,7 +4,7 @@ import TempoCore
 
 enum DisplayGeometry {
     static let width: CGFloat = 332
-    static let mainHeight: CGFloat = 196
+    static let mainHeight: CGFloat = 168
     static let widgetWidth: CGFloat = 244
     static let widgetHeight: CGFloat = 52
 }
@@ -25,20 +25,20 @@ struct ModernReadout: View {
         GeometryReader { geometry in
             let scale = min(geometry.size.width / DisplayGeometry.width,
                             geometry.size.height / DisplayGeometry.mainHeight)
-            VStack(spacing: 24 * scale) {
+            VStack(spacing: 16 * scale) {
                 HStack(spacing: 0) {
                     VStack(spacing: 2 * scale) {
-                        TempoValue(model: model, fontSize: 64 * scale, width: 166 * scale, height: 80 * scale)
+                        TempoValue(model: model, fontSize: 56 * scale, width: 166 * scale, height: 68 * scale)
                         caption("BPM", scale: scale)
                     }
                     .frame(width: 166 * scale)
                     VStack(spacing: 2 * scale) {
                         Text(model.inSilentBar ? "GAP" : subdivisionText)
-                            .font(.system(size: (model.inSilentBar ? 43 : 48) * scale, weight: .regular))
+                            .font(.system(size: (model.inSilentBar ? 38 : 42) * scale, weight: .regular))
                             .monospacedDigit()
                             .foregroundColor(model.inSilentBar ? palette.neutral : palette.beat)
                             .minimumScaleFactor(0.6).lineLimit(1)
-                            .frame(width: 158 * scale, height: 80 * scale)
+                            .frame(width: 158 * scale, height: 68 * scale)
                         caption(model.inSilentBar ? "SILENT BAR" : "SUBDIVISION", scale: scale)
                     }
                     .frame(width: 166 * scale)
@@ -47,7 +47,7 @@ struct ModernReadout: View {
                             onSet: { value in
                                 if model.subdivisions != value { model.subdivisions = value }
                             }, onDoubleClick: nil, onDragState: { model.editingTempo = $0 })
-                            .frame(width: 166 * scale, height: 104 * scale)
+                            .frame(width: 166 * scale, height: 84 * scale)
                             .accessibilityHidden(true)
                     }
                     .help("Drag up/down to change subdivision.")
@@ -55,7 +55,7 @@ struct ModernReadout: View {
                     .accessibilityLabel(model.inSilentBar ? "Silent practice bar" : "Subdivision")
                     .accessibilityValue(model.inSilentBar ? "Gap" : "\(model.subdivisions) clicks per beat")
                 }
-                .frame(height: 104 * scale)
+                .frame(height: 84 * scale)
                 BeatLights(model: model, width: DisplayGeometry.width * scale, maxDiameter: 68 * scale, spacing: 20 * scale)
                     .frame(height: 68 * scale)
 
@@ -66,7 +66,7 @@ struct ModernReadout: View {
     private func caption(_ title: String, scale: CGFloat) -> some View {
         Text(title).font(.system(size: 10 * scale, weight: .medium))
             .tracking(1.4 * scale).foregroundColor(palette.neutral.opacity(0.65))
-            .lineLimit(1).frame(height: 18 * scale)
+            .lineLimit(1).frame(height: 14 * scale)
     }
 }
 
@@ -164,10 +164,17 @@ private struct BeatLights: View {
 struct CompactReadout: View {
     @ObservedObject var model: Metronome
     var body: some View {
-        HStack(spacing: 12) {
-            TempoValue(model: model, fontSize: 26, width: 56, height: 32)
-            BeatLights(model: model, width: 120, maxDiameter: 20, spacing: 6)
-                .frame(width: 120, height: 32)
+        HStack(spacing: 8) {
+            HStack(spacing: 3) {
+                TempoValue(model: model, fontSize: 24, width: 52, height: 32)
+                Text("bpm").font(.system(size: 9, weight: .medium))
+                    .foregroundColor(model.theme.palette.neutral.opacity(0.65))
+                    .frame(width: 21).offset(y: 5)
+                    .accessibilityHidden(true)
+            }
+            .frame(width: 76, height: 32)
+            BeatLights(model: model, width: 104, maxDiameter: 20, spacing: 5)
+                .frame(width: 104, height: 32)
 
         }
         .frame(width: 188, height: 32)

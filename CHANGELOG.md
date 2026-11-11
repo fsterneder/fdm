@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.2
+
+- Reduce the main window from 376 to 308 points tall by tightening vertical spacing and the metric row.
+- Keep large beat circles and 44-point playback/mute hit areas.
+- Use flat speaker and Start/Stop controls, with playback accent on the foreground.
+- Add a small bpm unit in the widget without increasing its dimensions.
+
 ## 0.10.1
 
 - Remove the tempo slider and beat adjustment buttons.

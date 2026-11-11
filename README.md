@@ -25,7 +25,7 @@ open dist/fdm-3.app
 
 Completed beats stay filled; the current beat uses the theme's highlight. No Accent flashes one light per beat. Beat lights show progress and do not change the beat count when dragged.
 
-The main window shows subdivision or GAP; the single-row widget shows only BPM and beat progress. Start has a neutral background while stopped and an accent fill during playback. Closing the main window quits the app.
+The main window shows subdivision or GAP; the single-row widget shows BPM with its unit and beat progress. Speaker and Start/Stop use flat styling, with the playback accent on Start/Stop. Closing the main window quits the app.
 
 ## Gap practice
 

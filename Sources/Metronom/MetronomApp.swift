@@ -567,15 +567,16 @@ struct InstrumentView: View {
     @State private var showingSettings = false
     private var palette: InstrumentPalette { model.theme.palette }
     var body: some View {
-        VStack(spacing: 28) {
+        VStack(spacing: 18) {
             header
             ModernReadout(model: model).frame(height: DisplayGeometry.mainHeight)
             HStack(spacing: 8) {
                 Button { model.toggleMute() } label: {
                     Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
                         .font(.system(size: 16)).frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(InstrumentButtonStyle(radius: 10))
+                .buttonStyle(.plain).foregroundColor(palette.neutral)
                 .help(model.volume == 0 ? "Unmute (M)" : "Mute (M)")
                 .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
                 Button { model.toggle() } label: {
@@ -584,15 +585,16 @@ struct InstrumentView: View {
                         Text(model.playing ? "Stop" : "Start")
                     }
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(model.playing ? palette.activeForeground : palette.action)
+                    .foregroundColor(palette.action)
                     .frame(maxWidth: .infinity, minHeight: 44)
+                    .contentShape(Rectangle())
                 }
-                .buttonStyle(InstrumentButtonStyle(accent: model.playing, radius: 10))
+                .buttonStyle(.plain)
                 .help("Start / Stop (Space)")
                 .accessibilityLabel(model.playing ? "Stop metronome" : "Start metronome")
             }
         }
-        .padding(24).frame(width: 380)
+        .padding(.horizontal, 24).padding(.vertical, 16).frame(width: 380)
         .background(palette.background)
         .preferredColorScheme(model.theme.colorScheme)
         .alert("Audio unavailable", isPresented: Binding(
@@ -609,12 +611,12 @@ struct InstrumentView: View {
                 .tracking(-0.5).foregroundColor(palette.neutral)
             Spacer(minLength: 8)
             Button { model.tap() } label: {
-                Text("TAP").font(.system(size: 11, weight: .semibold)).frame(width: 32, height: 32)
+                Text("TAP").font(.system(size: 11, weight: .semibold)).frame(width: 32, height: 28)
             }
             .buttonStyle(.plain).foregroundColor(palette.neutral)
             .help("Tap tempo (T)").accessibilityLabel("Tap tempo")
             Button { showingSettings.toggle() } label: {
-                Image(systemName: "gearshape").font(.system(size: 17)).frame(width: 28, height: 32)
+                Image(systemName: "gearshape").font(.system(size: 17)).frame(width: 28, height: 28)
             }
             .buttonStyle(.plain).foregroundColor(palette.neutral)
             .help("Settings").accessibilityLabel("Settings")
@@ -625,12 +627,12 @@ struct InstrumentView: View {
             }
             Button(action: showWidget) {
                 Image(systemName: "arrow.down.right.and.arrow.up.left")
-                    .font(.system(size: 15)).frame(width: 28, height: 32)
+                    .font(.system(size: 15)).frame(width: 28, height: 28)
             }
             .buttonStyle(.plain).foregroundColor(palette.neutral)
             .help("Widget mode (Tab or \\)").accessibilityLabel("Enter widget mode")
         }
-        .frame(height: 32)
+        .frame(height: 28)
     }
 
 }
