@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.0
+
+- Add Blue, Everforest (dark/medium), and Zenwritten (dark) using their original Vim/Neovim palettes.
+- Apply each new palette to the main view, widget, accents, gradients, and themed Dock icon.
+- Keep Default first and alphabetize the remaining themes; document palette sources.
+
 ## 0.17.1
 
 - Give Default a coral first-beat/Play accent (#FF8370) and blue current beat (#70A5FF), including its bundled and themed icons.

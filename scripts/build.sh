@@ -24,8 +24,8 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>fdm</string>
 <key>CFBundleIconFile</key><string>AppIcon.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.17.1</string>
-<key>CFBundleVersion</key><string>42</string>
+<key>CFBundleShortVersionString</key><string>0.18.0</string>
+<key>CFBundleVersion</key><string>43</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
@@ -42,7 +42,7 @@ registrar="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchSe
 if [[ -x "$registrar" ]]; then
   "$registrar" -f "$app" || echo "Launch Services will refresh the icon when the app is opened." >&2
 fi
-ditto -c -k --sequesterRsrc --keepParent "$app" dist/fdm-0.17.1.zip
+ditto -c -k --sequesterRsrc --keepParent "$app" dist/fdm-0.18.0.zip
 echo "Built $PWD/$app"
 echo "Run it: open dist/fdm.app"
 

@@ -39,5 +39,5 @@ When Gap is on, small neutral dots below the beats show the bar sequence: curren
 
 Existing beat-based gap lengths round up to whole bars. Accent is independent of meter. Closing the main window quits the app.
 
-The Dock icon follows the selected theme; Finder uses Default. Homebrew installation is not published yet. See [CHANGELOG.md](CHANGELOG.md).
+The Dock icon follows the selected theme; Finder uses Default. Homebrew installation is not published yet. See [CHANGELOG.md](CHANGELOG.md) and [theme palette sources](docs/themes.md).
 

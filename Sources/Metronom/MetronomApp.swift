@@ -224,10 +224,13 @@ final class Metronome: ObservableObject {
 
 
 enum InstrumentTheme: String, CaseIterable {
-    case charcoal, dracula, nord, gruvbox, solarizedLight, desert, paperColorLight, peachpuff, tokyoNight
+    case charcoal, blue, dracula, everforest, nord, gruvbox, solarizedLight, desert, paperColorLight, peachpuff, tokyoNight, zenwritten
     var name: String {
         switch self {
         case .charcoal: return "Default"
+        case .blue: return "Blue"
+        case .everforest: return "Everforest"
+        case .zenwritten: return "Zenwritten"
         case .dracula: return "Dracula"
         case .nord: return "Nord"
         case .gruvbox: return "Gruvbox"
@@ -277,6 +280,9 @@ struct InstrumentPalette {
     private var colors: ThemeColors {
         switch theme {
         case .charcoal: return ThemeColors(background: 0x17191B, neutral: 0xF8F6F0, tempo: 0xF8F6F0, beat: 0xF8F6F0, gap: 0xF8F6F0, playingBeat: 0x70A5FF, action: 0xFF8370)
+        case .blue: return ThemeColors(background: 0x000087, neutral: 0xFFD700, tempo: 0xFFD700, beat: 0xFFA500, gap: 0xD787D7, playingBeat: 0x5FFFFF, action: 0x00FF00)
+        case .everforest: return ThemeColors(background: 0x2D353B, neutral: 0xD3C6AA, tempo: 0xA7C080, beat: 0xDBBC7F, gap: 0xD699B6, playingBeat: 0x7FBBB3, action: 0xE67E80)
+        case .zenwritten: return ThemeColors(background: 0x191919, neutral: 0xBBBBBB, tempo: 0xBBBBBB, beat: 0x9E9E9E, gap: 0x939393, playingBeat: 0xC9C9C9, action: 0x8B8B8B)
         case .dracula: return ThemeColors(background: 0x282A36, neutral: 0xF8F8F2, tempo: 0xBD93F9, beat: 0xFFB86C, gap: 0xFF79C6, playingBeat: 0x8BE9FD, action: 0x50FA7B)
         case .nord: return ThemeColors(background: 0x2E3440, neutral: 0xECEFF4, tempo: 0x88C0D0, beat: 0xB48EAD, gap: 0xEBCB8B, playingBeat: 0x8FBCBB, action: 0xA3BE8C)
         case .gruvbox: return ThemeColors(background: 0x282828, neutral: 0xEBDBB2, tempo: 0xFABD2F, beat: 0xFE8019, gap: 0xD3869B, playingBeat: 0x8EC07C, action: 0xB8BB26)
