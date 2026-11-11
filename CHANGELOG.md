@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+
+- Gap now sets how many audible bars play before exactly one silent bar.
+- Add Random: each cycle chooses 1, 2, or 4 audible bars, then silences one bar.
+- Keep whole-bar boundaries, sample timing, subdivisions, and No accent behavior.
+- Reset random planning on transport and pattern changes.
+
 ## 0.3.0
 
 - Add repeating gap practice: one audible bar, then 1, 2, or 4 silent bars.
