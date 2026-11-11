@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0
+
+- Define six consistent color roles for every theme: background, neutral, tempo, beat, playing beat, and action.
+- Match the tempo wheel indicator to the tempo digits.
+- Color the f/d/m/-/3 logo by tempo/beat/playing-beat/neutral/action.
+- Use neutral inactive beat outlines and highlight only the current beat.
+- Derive surfaces and borders from background and neutral; use the action role for all button highlights and Start/Stop.
+
 ## 0.8.4
 
 - Enlarge the icon's metronome symbol and separate its pendulum from the base.

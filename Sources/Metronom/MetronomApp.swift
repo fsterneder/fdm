@@ -246,221 +246,77 @@ enum InstrumentTheme: String, CaseIterable {
     var palette: InstrumentPalette { InstrumentPalette(theme: self) }
 }
 
+// Every theme defines exactly the same six color roles.
+// Surfaces, borders, and disabled states are blends or opacities of these roles.
+private struct ThemeColors {
+    let background: UInt32
+    let neutral: UInt32
+    let tempo: UInt32
+    let beat: UInt32
+    let playingBeat: UInt32
+    let action: UInt32
+}
+
 struct InstrumentPalette {
     let theme: InstrumentTheme
+    private var colors: ThemeColors {
+        switch theme {
+        case .charcoal: return ThemeColors(background: 0x101213, neutral: 0xDDE4D8, tempo: 0xBBCDA1, beat: 0xE3BC89, playingBeat: 0x8DBAB2, action: 0xFF7D40)
+        case .dracula: return ThemeColors(background: 0x282A36, neutral: 0xF8F8F2, tempo: 0xBD93F9, beat: 0xFFB86C, playingBeat: 0x8BE9FD, action: 0x50FA7B)
+        case .nord: return ThemeColors(background: 0x2E3440, neutral: 0xECEFF4, tempo: 0x88C0D0, beat: 0xB48EAD, playingBeat: 0x8FBCBB, action: 0xA3BE8C)
+        case .gruvbox: return ThemeColors(background: 0x282828, neutral: 0xEBDBB2, tempo: 0xFABD2F, beat: 0xFE8019, playingBeat: 0x8EC07C, action: 0xB8BB26)
+        case .githubLight: return ThemeColors(background: 0xFFFFFF, neutral: 0x24292F, tempo: 0x0969DA, beat: 0x953800, playingBeat: 0x8250DF, action: 0x1A7F37)
+        case .monokai: return ThemeColors(background: 0x272822, neutral: 0xF8F8F2, tempo: 0xAE81FF, beat: 0xFD971F, playingBeat: 0x66D9EF, action: 0xA6E22E)
+        case .solarizedLight: return ThemeColors(background: 0xFDF6E3, neutral: 0x586E75, tempo: 0x268BD2, beat: 0xCB4B16, playingBeat: 0x6C71C4, action: 0x168A81)
+        case .desert: return ThemeColors(background: 0x333333, neutral: 0xFFFFFF, tempo: 0xFFA0A0, beat: 0xF0E68C, playingBeat: 0x98FB98, action: 0x87CEEB)
+        case .paperColorLight: return ThemeColors(background: 0xEEEEEE, neutral: 0x444444, tempo: 0x005F87, beat: 0xAF0000, playingBeat: 0x008787, action: 0x5F8700)
+        case .peachpuff: return ThemeColors(background: 0xFFDAB9, neutral: 0x000000, tempo: 0xA52A2A, beat: 0xC00058, playingBeat: 0x008080, action: 0x2E6F40)
+        case .tokyoNight: return ThemeColors(background: 0x1A1B26, neutral: 0xC0CAF5, tempo: 0xFF9E64, beat: 0x7AA2F7, playingBeat: 0x7DCFFF, action: 0x9ECE6A)
+        }
+    }
     private func color(_ hex: UInt32) -> Color {
         Color(red: Double((hex >> 16) & 255) / 255,
               green: Double((hex >> 8) & 255) / 255,
               blue: Double(hex & 255) / 255)
     }
-    var ink: Color {
-        switch theme {
-        case .charcoal: return Color(red: 0.055, green: 0.063, blue: 0.067)
-        case .dracula: return color(0x282A36)
-        case .nord: return color(0x2E3440)
-        case .gruvbox: return color(0x282828)
-        case .githubLight: return color(0xFFFFFF)
-        case .monokai: return color(0x272822)
-        case .solarizedLight: return color(0xFDF6E3)
-        case .desert: return color(0x333333)
-        case .paperColorLight: return color(0xEEEEEE)
-        case .peachpuff: return color(0xFFDAB9)
-        case .tokyoNight: return color(0x1A1B26)
+    var background: Color { color(colors.background) }
+    var neutral: Color { color(colors.neutral) }
+    var tempo: Color { color(colors.tempo) }
+    var beat: Color { color(colors.beat) }
+    var playingBeat: Color { color(colors.playingBeat) }
+    var action: Color { color(colors.action) }
+    private func surface(_ amount: Double) -> Color {
+        func channel(_ shift: UInt32) -> Double {
+            let base = Double((colors.background >> shift) & 255)
+            let foreground = Double((colors.neutral >> shift) & 255)
+            return (base + (foreground - base) * amount) / 255
         }
+        return Color(red: channel(16), green: channel(8), blue: channel(0))
     }
-    var panel: Color {
-        switch theme {
-        case .charcoal: return Color(red: 0.105, green: 0.117, blue: 0.122)
-        case .dracula: return color(0x44475A)
-        case .nord: return color(0x3B4252)
-        case .gruvbox: return color(0x3C3836)
-        case .githubLight: return color(0xF6F8FA)
-        case .monokai: return color(0x3E3D32)
-        case .solarizedLight: return color(0xEEE8D5)
-        case .desert: return color(0x4D4D4D)
-        case .paperColorLight: return color(0xE4E4E4)
-        case .peachpuff: return color(0xF5C195)
-        case .tokyoNight: return color(0x292E42)
+    private func luminance(_ hex: UInt32) -> Double {
+        func linear(_ shift: UInt32) -> Double {
+            let value = Double((hex >> shift) & 255) / 255
+            return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
         }
-    }
-    var accent: Color {
-        switch theme {
-        case .charcoal: return Finish.orange
-        case .dracula: return color(0xBD93F9)
-        case .nord: return color(0x88C0D0)
-        case .gruvbox: return color(0xFABD2F)
-        case .githubLight: return color(0x0969DA)
-        case .monokai: return color(0xA6E22E)
-        case .solarizedLight: return color(0x2AA198)
-        case .desert: return color(0xF0E68C)
-        case .paperColorLight: return color(0x005F87)
-        case .peachpuff: return color(0xA52A2A)
-        case .tokyoNight: return color(0x7AA2F7)
-        }
-    }
-    var foreground: Color {
-        switch theme {
-        case .charcoal: return .white
-        case .dracula: return color(0xF8F8F2)
-        case .nord: return color(0xECEFF4)
-        case .gruvbox: return color(0xEBDBB2)
-        case .githubLight: return color(0x24292F)
-        case .monokai: return color(0xF8F8F2)
-        case .solarizedLight: return color(0x586E75)
-        case .desert: return color(0xFFFFFF)
-        case .paperColorLight: return color(0x444444)
-        case .peachpuff: return color(0x000000)
-        case .tokyoNight: return color(0xC0CAF5)
-        }
-    }
-    var muted: Color {
-        switch theme {
-        case .charcoal: return Color(red: 0.52, green: 0.56, blue: 0.56)
-        case .dracula: return color(0x8BE9FD)
-        case .nord: return color(0xD8DEE9)
-        case .gruvbox: return color(0xBDAE93)
-        case .githubLight: return color(0x57606A)
-        case .monokai: return color(0xCFCFC2)
-        case .solarizedLight: return color(0x586E75)
-        case .desert: return color(0x6DCEEB)
-        case .paperColorLight: return color(0x005F87)
-        case .peachpuff: return color(0x406090)
-        case .tokyoNight: return color(0xA9B1D6)
-        }
-    }
-    var controlTop: Color {
-        switch theme {
-        case .charcoal: return Color(white: 0.23)
-        case .dracula: return color(0x44475A)
-        case .nord: return color(0x434C5E)
-        case .gruvbox: return color(0x3C3836)
-        case .githubLight: return color(0xFFFFFF)
-        case .monokai: return color(0x414339)
-        case .solarizedLight: return color(0xEEE8D5)
-        case .desert: return color(0x666666)
-        case .paperColorLight: return color(0xE4E4E4)
-        case .peachpuff: return color(0xF5C195)
-        case .tokyoNight: return color(0x292E42)
-        }
-    }
-    var controlBottom: Color {
-        switch theme {
-        case .charcoal: return Color(white: 0.16)
-        case .dracula: return color(0x44475A)
-        case .nord: return color(0x434C5E)
-        case .gruvbox: return color(0x3C3836)
-        case .githubLight: return color(0xFFFFFF)
-        case .monokai: return color(0x414339)
-        case .solarizedLight: return color(0xEEE8D5)
-        case .desert: return color(0x666666)
-        case .paperColorLight: return color(0xE4E4E4)
-        case .peachpuff: return color(0xF5C195)
-        case .tokyoNight: return color(0x292E42)
-        }
-    }
-    var recess: Color { theme == .charcoal ? ink.opacity(0.65) : panel }
-    var border: Color { theme.isLight ? .black : .white }
-    var fieldBorder: Color {
-        switch theme {
-        case .charcoal: return border.opacity(0.06)
-        case .dracula: return color(0x6272A4)
-        case .nord: return color(0x4C566A)
-        case .gruvbox: return color(0x665C54)
-        case .githubLight: return color(0xD0D7DE)
-        case .monokai: return color(0x75715E)
-        case .solarizedLight: return color(0x93A1A1)
-        case .desert: return color(0x7F7F8C)
-        case .paperColorLight: return color(0xBCBCBC)
-        case .peachpuff: return color(0xDFBA99)
-        case .tokyoNight: return color(0x545C7E)
-        }
+        return 0.2126 * linear(16) + 0.7152 * linear(8) + 0.0722 * linear(0)
     }
     var activeForeground: Color {
-        switch theme {
-        case .githubLight, .paperColorLight, .peachpuff: return .white
-        case .solarizedLight: return color(0x002B36)
-        default: return ink
+        let highlight = luminance(colors.action)
+        func contrast(_ hex: UInt32) -> Double {
+            let value = luminance(hex)
+            return (max(highlight, value) + 0.05) / (min(highlight, value) + 0.05)
         }
+        return contrast(colors.background) >= contrast(colors.neutral) ? background : neutral
     }
-    var labelAccent: Color { theme == .solarizedLight ? foreground : accent }
-    var lcdDigitColor: Color {
-        switch theme {
-        case .monokai: return color(0xAE81FF)
-        case .desert: return color(0xFFA0A0)
-        case .tokyoNight: return color(0xFF9E64)
-        case .solarizedLight: return color(0x586E75)
-        default: return accent
-        }
-    }
-    private var hardwareInk: Color { Color(red: 0.08, green: 0.12, blue: 0.095) }
-    var lcdLabelColor: Color { theme == .charcoal ? hardwareInk : foreground }
-    var beatColor: Color {
-        switch theme {
-        case .charcoal: return hardwareInk
-        case .dracula: return color(0xFFB86C)
-        case .nord: return color(0xB48EAD)
-        case .gruvbox: return color(0xFE8019)
-        case .githubLight: return color(0x953800)
-        case .monokai: return color(0xFD971F)
-        case .solarizedLight: return color(0xCB4B16)
-        case .desert: return lcdDigitColor
-        case .paperColorLight: return color(0xAF0000)
-        case .peachpuff: return color(0xC00058)
-        case .tokyoNight: return color(0x7AA2F7)
-        }
-    }
-    // The pendulum, beat markers, subdivision, and gap status form one visual group.
-    var lcdSymbolColor: Color {
-        switch theme {
-        case .charcoal: return hardwareInk
-        case .dracula: return color(0x8BE9FD)
-        case .nord: return color(0xA3BE8C)
-        case .gruvbox: return color(0x8EC07C)
-        case .githubLight: return color(0x116329)
-        case .monokai: return color(0x66D9EF)
-        case .solarizedLight: return color(0x268BD2)
-        case .desert: return lcdDigitColor
-        case .paperColorLight: return color(0x008700)
-        case .peachpuff: return color(0x008B8B)
-        case .tokyoNight: return color(0x9ECE6A)
-        }
-    }
-    var playColor: Color {
-        switch theme {
-        case .charcoal: return accent
-        case .dracula: return color(0x50FA7B)
-        case .nord: return color(0xA3BE8C)
-        case .gruvbox: return color(0xB8BB26)
-        case .githubLight: return color(0x116329)
-        case .monokai: return color(0xA6E22E)
-        case .solarizedLight: return color(0x2AA198)
-        case .desert: return color(0x89FB98)
-        case .paperColorLight: return color(0x008700)
-        case .peachpuff: return color(0xA52A2A)
-        case .tokyoNight: return color(0x9ECE6A)
-        }
-    }
-
-    var bodyColors: [Color] { theme == .charcoal ? [panel, ink] : [ink, ink] }
-    var lcdGlass: [Color] {
-        if theme == .charcoal {
-            return [
-                Color(red: 0.64, green: 0.69, blue: 0.60),
-                Color(red: 0.71, green: 0.75, blue: 0.66),
-                Color(red: 0.63, green: 0.68, blue: 0.59)
-            ]
-        }
-        if theme == .desert { return [color(0x212121), color(0x212121)] }
-        return [ink, ink]
-    }
-    var lcdBorder: Color {
-        if theme == .charcoal { return .black.opacity(0.65) }
-        if theme == .desert { return color(0xAAA7B9) }
-        return fieldBorder
-    }
-    var sliderTint: Color { theme == .charcoal ? Finish.lcd : accent }
-    var dialTop: Color { theme == .charcoal ? Color(white: 0.29) : controlTop }
-    var dialBottom: Color { theme == .charcoal ? Color(white: 0.15) : controlBottom }
+    var controlTop: Color { surface(0.11) }
+    var controlBottom: Color { surface(0.07) }
+    var recess: Color { surface(0.035) }
+    var fieldBorder: Color { neutral.opacity(0.22) }
+    var bodyColors: [Color] { [background, background] }
+    var lcdGlass: [Color] { [background, background] }
+    var lcdBorder: Color { neutral.opacity(0.45) }
+    var dialTop: Color { surface(0.14) }
+    var dialBottom: Color { surface(0.08) }
 }
 
 private struct InstrumentThemeKey: EnvironmentKey {
@@ -480,14 +336,9 @@ private enum ThemedDockIcon {
     static func apply(_ theme: InstrumentTheme) {
         // Capture colors before AppKit calls the resolution-independent drawing handler.
         let palette = theme.palette
-        let background = NSColor(palette.ink)
-        let frame = NSColor(palette.lcdDigitColor)
-        let pendulum: NSColor
-        switch theme {
-        case .dracula: pendulum = NSColor(calibratedRed: 1, green: 121.0 / 255, blue: 198.0 / 255, alpha: 1)
-        case .charcoal: pendulum = NSColor(Finish.lcd)
-        default: pendulum = NSColor(palette.beatColor)
-        }
+        let background = NSColor(palette.background)
+        let frame = NSColor(palette.tempo)
+        let pendulum = NSColor(palette.neutral)
         let image = NSImage(size: NSSize(width: 1024, height: 1024), flipped: false) { bounds in
             // Draw in the actual requested bounds; never assume a bitmap's backing scale.
             let sx = bounds.width / 1024
@@ -527,11 +378,6 @@ private enum ThemedDockIcon {
     }
 }
 
-private enum Finish {
-    static let lcd = Color(red: 0.74, green: 0.81, blue: 0.66)
-    static let orange = Color(red: 1.0, green: 0.49, blue: 0.25)
-}
-
 struct InstrumentButtonStyle: ButtonStyle {
     @Environment(\.instrumentTheme) private var theme
     private var palette: InstrumentPalette { theme.palette }
@@ -539,16 +385,16 @@ struct InstrumentButtonStyle: ButtonStyle {
     var radius: CGFloat = 10
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundColor(accent ? palette.activeForeground : palette.foreground.opacity(theme == .charcoal ? 0.87 : 1))
+            .foregroundColor(accent ? palette.activeForeground : palette.action)
             .background(
                 LinearGradient(
-                    colors: accent ? [palette.playColor, palette.playColor] : [palette.controlTop, palette.controlBottom],
+                    colors: accent ? [palette.action, palette.action] : [palette.controlTop, palette.controlBottom],
                     startPoint: .top, endPoint: .bottom
                 ), in: RoundedRectangle(cornerRadius: radius)
             )
             .overlay(RoundedRectangle(cornerRadius: radius)
-                .strokeBorder(accent ? palette.playColor : palette.fieldBorder, lineWidth: 1))
-            .shadow(color: .black.opacity(configuration.isPressed || theme != .charcoal ? 0 : 0.3), radius: 2, y: 2)
+                .strokeBorder(palette.action.opacity(accent ? 1 : 0.45), lineWidth: 1))
+            .shadow(color: palette.background.opacity(configuration.isPressed ? 0 : 0.3), radius: 2, y: 2)
             .brightness(configuration.isPressed ? -0.08 : 0)
             .offset(y: configuration.isPressed ? 1 : 0)
     }
@@ -613,13 +459,13 @@ struct HardwareLCD: View {
         // Capture UI state before entering the drawing closures.
         let theme = model.theme
         let palette = theme.palette
-        let ink = theme == .charcoal ? Color(red: 0.08, green: 0.12, blue: 0.095) : palette.lcdDigitColor
-        let beatInk = palette.beatColor
-        let labelInk = palette.lcdLabelColor
-        let markerInk = palette.lcdSymbolColor
-        let pendulumInk = palette.lcdLabelColor
-        let noteInk = palette.lcdLabelColor
-        let gapInk = palette.lcdSymbolColor
+        let ink = palette.tempo
+        let beatInk = palette.beat
+        let labelInk = palette.neutral
+        let markerInk = palette.playingBeat
+        let pendulumInk = palette.neutral
+        let noteInk = palette.neutral
+        let gapInk = palette.neutral
         let borderInk = palette.lcdBorder
         let captionCapHeight = NSFont.systemFont(ofSize: 12.5, weight: .semibold).capHeight
         let gapCapHeight = NSFont.systemFont(ofSize: 8.5, weight: .semibold).capHeight
@@ -730,10 +576,10 @@ struct HardwareLCD: View {
                     triangle.addLine(to: CGPoint(x: x + markerWidth, y: 97.25))
                     triangle.addLine(to: CGPoint(x: x, y: 110))
                     triangle.closeSubpath()
-                    let filled = beats == 0
-                        ? pulseVisible : (currentBeat >= 0 && index <= currentBeat)
-                    if filled { context.fill(triangle, with: .color(markerInk)) }
-                    context.stroke(triangle, with: .color(markerInk), lineWidth: 1.7)
+                    let isCurrent = beats == 0
+                        ? pulseVisible : (playing && currentBeat >= 0 && index == currentBeat)
+                    if isCurrent { context.fill(triangle, with: .color(markerInk)) }
+                    context.stroke(triangle, with: .color(isCurrent ? markerInk : labelInk), lineWidth: 1.7)
                 }
             }
         }
@@ -906,16 +752,16 @@ struct ChoiceDropdown: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.system(size: 8, weight: .semibold)).tracking(1)
-                    .foregroundColor(palette.muted)
+                    .foregroundColor(palette.neutral.opacity(0.65))
                 HStack(spacing: 6) {
                     Text(selectedLabel)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(palette.foreground.opacity(0.92))
+                        .foregroundColor(palette.neutral.opacity(0.92))
                         .lineLimit(1)
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 8, weight: .semibold))
-                        .foregroundColor(palette.muted)
+                        .foregroundColor(palette.action)
                 }
             }
             .padding(.horizontal, 11)
@@ -999,11 +845,16 @@ struct InstrumentView: View {
         VStack(spacing: 16) {
             HStack(spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("fdm-3").font(.system(size: 18, weight: .bold, design: .rounded))
+                    (Text("f").foregroundColor(palette.tempo)
+                     + Text("d").foregroundColor(palette.beat)
+                     + Text("m").foregroundColor(palette.playingBeat)
+                     + Text("-").foregroundColor(palette.neutral)
+                     + Text("3").foregroundColor(palette.action))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
                         .tracking(-0.5)
-                        .foregroundColor(palette.lcdDigitColor)
+                        .accessibilityLabel("fdm-3")
                     Text("METRONOME").font(.system(size: 8, weight: .medium))
-                        .tracking(1.8).foregroundColor(palette.muted)
+                        .tracking(1.8).foregroundColor(palette.neutral.opacity(0.65))
                 }
                 Spacer(minLength: 8)
                 HStack(spacing: 6) {
@@ -1073,7 +924,7 @@ struct InstrumentView: View {
         Button { model.toggleMute() } label: {
             Image(systemName: model.volume == 0 ? "speaker.slash.fill" : "speaker.wave.2")
                 .font(.system(size: 17, weight: .medium))
-                .foregroundColor(palette.foreground)
+                .foregroundColor(palette.action)
                 .frame(width: 48, height: 48)
         }
         .buttonStyle(InstrumentButtonStyle(radius: 24))
@@ -1096,7 +947,7 @@ struct InstrumentView: View {
     private var tempoDial: some View {
         ZStack {
             ForEach(0..<31, id: \.self) { index in
-                Capsule().fill(palette.foreground.opacity(index % 5 == 0 ? 0.32 : 0.10))
+                Capsule().fill(palette.neutral.opacity(index % 5 == 0 ? 0.32 : 0.10))
                     .frame(width: 1.5, height: index % 5 == 0 ? 6 : 3)
                     .offset(y: -66)
                     .rotationEffect(.degrees(-135 + Double(index) * 9))
@@ -1105,9 +956,9 @@ struct InstrumentView: View {
                 .fill(LinearGradient(colors: [palette.dialTop, palette.dialBottom],
                                      startPoint: .topLeading, endPoint: .bottomTrailing))
                 .frame(width: 120, height: 120)
-                .overlay(Circle().strokeBorder(palette.border.opacity(0.14)))
-                .shadow(color: .black.opacity(0.5), radius: 4, y: 4)
-            Capsule().fill(palette.accent).frame(width: 4, height: 19)
+                .overlay(Circle().strokeBorder(palette.neutral.opacity(0.14)))
+                .shadow(color: palette.background.opacity(0.5), radius: 4, y: 4)
+            Capsule().fill(palette.tempo).frame(width: 4, height: 19)
                 .offset(y: -42)
                 .rotationEffect(.degrees(-135 + Double(model.bpm - 30) / 222 * 270))
         }
@@ -1151,7 +1002,7 @@ struct InstrumentSettings: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Settings").font(.system(size: 15, weight: .semibold))
-                .foregroundColor(palette.foreground)
+                .foregroundColor(palette.neutral)
             VStack(spacing: 8) {
                 HStack(spacing: 8) {
                     SubdivisionSelector(value: $model.subdivisions)
@@ -1166,14 +1017,14 @@ struct InstrumentSettings: View {
                 Button { model.toggleMute() } label: {
                     Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
                         .font(.system(size: 12))
-                        .foregroundColor(palette.foreground)
+                        .foregroundColor(palette.action)
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
                 .help(model.volume == 0 ? "Unmute (M)" : "Mute (M)")
                 .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
                 Slider(value: $model.volume, in: 0...1)
-                    .tint(palette.sliderTint).controlSize(.small).accessibilityLabel("Volume")
+                    .tint(palette.action).controlSize(.small).accessibilityLabel("Volume")
             }
         }
         .padding(16).frame(width: 300)
@@ -1346,7 +1197,7 @@ struct TempoWidget: View {
                 .frame(width: LCDGeometry.widgetDisplayWidth, height: LCDGeometry.widgetDisplayHeight)
             VStack(spacing: 6) {
                 Circle()
-                    .fill(model.playing ? palette.playColor : palette.foreground.opacity(0.18))
+                    .fill(model.playing ? palette.action : palette.neutral.opacity(0.18))
                     .frame(width: 9, height: 9)
                     .frame(width: 28, height: 28)
                     .help(model.playing ? "Metronome is playing" : "Metronome is stopped")
@@ -1367,7 +1218,7 @@ struct TempoWidget: View {
         .background(LinearGradient(colors: palette.bodyColors,
                                   startPoint: .topLeading, endPoint: .bottomTrailing),
                     in: RoundedRectangle(cornerRadius: 13))
-        .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(palette.border.opacity(0.10)))
+        .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(palette.neutral.opacity(0.10)))
         .contextMenu {
             Button(model.playing ? "Stop" : "Start") { model.toggle() }
             Button("Tap Tempo") { model.tap() }
