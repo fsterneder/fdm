@@ -30,7 +30,7 @@ The build embeds a pre-rendered, multi-resolution macOS app icon for Finder and 
 
 ## Visual design
 
-Version 0.3.0 replaces the default bordered buttons with rounded hardware-style controls, a grey transport button that uses the theme accent during playback, a compact sound dropdown, compact pattern menus, a hardware-style grey-green LCD with symmetric vector seven-segment tempo and beat digits, a voice number, and triangular beat markers, and a calibrated tempo dial. Beat indicators use the same playback state in both window modes. The main LCD follows the KDM-3 reference layout: TEMPO, BEAT, and VOICE (1–5 for Click/Wood/Bright/Clave/Soft Pulse). Triangular markers fill through the current beat and return to outlines when stopped. In No accent mode, the single triangle flashes on every pulse in both the main LCD and widget, without changing the sound. The small metronome symbol swings with each audible beat, including when no accent is selected, and rests upright when stopped. Tempo digits and the BEAT label have separate columns to prevent overlap. The widget uses the same segmented digits and triangular markers in a compact LCD. The bundled icon and build number are updated; quit any older running copy before opening the rebuilt app.
+Version 0.4.0 replaces the default bordered buttons with rounded hardware-style controls, a grey transport button that uses the theme accent during playback, a compact sound dropdown, compact pattern menus, a hardware-style grey-green LCD with symmetric vector seven-segment tempo and beat digits, a voice number, and triangular beat markers, and a calibrated tempo dial. Beat indicators use the same playback state in both window modes. The main LCD follows the KDM-3 reference layout: TEMPO, BEAT, and VOICE (1–5 for Click/Wood/Bright/Clave/Soft Pulse). Triangular markers fill through the current beat and return to outlines when stopped. In No accent mode, the single triangle flashes on every pulse in both the main LCD and widget, without changing the sound. The small metronome symbol swings with each audible beat, including when no accent is selected, and rests upright when stopped. Tempo digits and the BEAT label have separate columns to prevent overlap. The widget uses the same segmented digits and triangular markers in a compact LCD. The bundled icon and build number are updated; quit any older running copy before opening the rebuilt app.
 
 ## Controls
 
@@ -40,13 +40,13 @@ The +/− buttons set the number of quarter-note pulses per bar (0 means no acce
 
 Audio clicks use AVAudioPlayerNode sample positions and a half-second scheduling horizon. The display follows playback completion and may lag audio by roughly the click length. Audio device switching and sleep/wake behavior need testing on real hardware. This first version does not include a tuner, clave patterns, or every KDM-3 function.
 
-## Gap practice (0.3.0)
+## Gap practice (0.4.0)
 
 The GAP dropdown replaces the Beats dropdown; use +/− for beat counts. The first settings row is Division / Gap and the second is Sound / Theme.
 
-Choose Off (default), 1 silent bar, 2 silent bars, or 4 silent bars. Each cycle plays one audible bar, then the selected number of silent bars, and repeats. The audio sample clock continues through silence; all subdivision clicks are silenced. The LCD displays GAP during the silent bars in both window modes, while beat indicators and the pendulum continue.
+Choose Off (default), After 1 bar, After 2 bars, After 4 bars, or Random. Each cycle plays the selected number of audible bars, then exactly one silent bar, and repeats. In Random, every cycle independently chooses 1, 2, or 4 audible bars with equal probability, followed by one silent bar. It never randomizes individual clicks or the duration of the silent bar. Gap values now describe audible bars before silence (changed from 0.3.0). The audio sample clock continues through silence; all subdivision clicks are silenced. The LCD displays GAP during the silent bars in both window modes, while beat indicators and the pendulum continue.
 
-No accent uses four-pulse bars for the gap cycle, without adding an audible accent. Changing gap, tempo, beats, or division restarts from the first audible bar. Gap is saved between launches. Swift tests cover bar boundaries, subdivisions, each gap length, and no-accent mode; they require the macOS/Xcode test environment.
+No accent uses four-pulse bars for the gap cycle, without adding an audible accent. Changing gap, tempo, beats, or division restarts from the first audible bar. Gap is saved between launches. Swift tests cover fixed bar boundaries, subdivisions, exactly one silent bar, no-accent mode, deterministic random cycles, draw frequency, and transport reset; they require the macOS/Xcode test environment.
 
 ## Themes
 
@@ -78,11 +78,11 @@ There is no published tap or binary yet. Do not expect `brew install --cask fdm-
 
 After testing the app on your Mac:
 
-1. Host the exact `dist/fdm-3-0.3.0.zip` file at an HTTPS URL (for example, a GitHub release).
+1. Host the exact `dist/fdm-3-0.4.0.zip` file at an HTTPS URL (for example, a GitHub release).
 2. Generate a cask using that URL:
 
    ```sh
-   bash scripts/make-cask.sh https://YOUR-HOST/fdm-3-0.3.0.zip
+   bash scripts/make-cask.sh https://YOUR-HOST/fdm-3-0.4.0.zip
    ```
 
 3. Put the generated `dist/Casks/fdm-3.rb` in a GitHub repository named `homebrew-fdm-3` under its `Casks` folder.
