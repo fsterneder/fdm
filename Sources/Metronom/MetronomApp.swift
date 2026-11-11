@@ -27,6 +27,12 @@ struct MetronomApp: App {
                 Button("Slower") { model.bpm -= 1 }.keyboardShortcut(.downArrow, modifiers: []).disabled(model.editingTempo)
                 Button("Faster by 10 BPM") { model.bpm += 10 }.keyboardShortcut(.rightArrow, modifiers: []).disabled(model.editingTempo)
                 Button("Slower by 10 BPM") { model.bpm -= 10 }.keyboardShortcut(.leftArrow, modifiers: []).disabled(model.editingTempo)
+                Button("Increase Beats") { model.adjustBeats(by: 1) }
+                    .keyboardShortcut(.upArrow, modifiers: [.shift])
+                    .disabled(model.editingTempo || model.beats == 9)
+                Button("Decrease Beats") { model.adjustBeats(by: -1) }
+                    .keyboardShortcut(.downArrow, modifiers: [.shift])
+                    .disabled(model.editingTempo || model.beats == 0)
             }
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Widget Mode") { windows.toggle() }
@@ -107,6 +113,12 @@ final class Metronome: ObservableObject {
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: format)
         player.volume = Float(volume)
+    }
+    func adjustBeats(by delta: Int) {
+        let index = Self.beatOptions.firstIndex(of: beats) ?? 0
+        let next = min(Self.beatOptions.count - 1, max(0, index + delta))
+        let value = Self.beatOptions[next]
+        if value != beats { beats = value }
     }
     func toggle() { playing ? stop() : start() }
     func toggleMute() { volume = volume > 0 ? 0 : lastAudibleVolume }
@@ -791,7 +803,7 @@ struct InstrumentView: View {
                         .frame(width: 32, height: 32)
                 }
                 .buttonStyle(InstrumentButtonStyle(radius: 16))
-                .help("Switch to floating mini metronome (Tab)")
+                .help("Switch to floating mini metronome (Tab or |)")
                 .accessibilityLabel("Enter widget mode")
             }
             HardwareLCD(model: model).frame(height: 154)
@@ -924,9 +936,7 @@ struct InstrumentView: View {
     private func beatButton(delta: Int) -> some View {
         let atLimit = delta < 0 ? model.beats == 0 : model.beats == 9
         return Button {
-            let index = Metronome.beatOptions.firstIndex(of: model.beats) ?? 0
-            let next = min(Metronome.beatOptions.count - 1, max(0, index + delta))
-            model.beats = Metronome.beatOptions[next]
+            model.adjustBeats(by: delta)
         } label: {
             Image(systemName: "triangle.fill")
                 .font(.system(size: 15, weight: .regular))
@@ -936,7 +946,7 @@ struct InstrumentView: View {
         .buttonStyle(InstrumentButtonStyle(radius: 22))
         .disabled(atLimit)
         .opacity(atLimit ? 0.4 : 1)
-        .help(delta < 0 ? "Decrease beats per bar (0 = no accent)" : "Increase beats per bar")
+        .help(delta < 0 ? "Decrease beats per bar (Shift + ↓)" : "Increase beats per bar (Shift + ↑)")
         .accessibilityLabel(delta < 0 ? "Decrease beats per bar" : "Increase beats per bar")
         .accessibilityValue(model.beats == 0 ? "No accent" : "\(model.beats) beats per bar")
     }
@@ -980,9 +990,23 @@ final class WindowModes: ObservableObject {
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, self.model?.editingTempo != true,
-                  event.window === self.mainWindow || event.window === self.widget,
-                  event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
+                  event.window === self.mainWindow || event.window === self.widget
             else { return event }
+            let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift])
+            // Match the typed pipe character, including layouts that use Option for it.
+            if event.characters == "|", modifiers.intersection([.command, .control]).isEmpty {
+                if !event.isARepeat { self.toggle() }
+                return nil
+            }
+            if modifiers == [.shift] {
+                switch event.keyCode {
+                case 126: self.model?.adjustBeats(by: 1)
+                case 125: self.model?.adjustBeats(by: -1)
+                default: return event
+                }
+                return nil
+            }
+            guard modifiers.isEmpty else { return event }
             switch event.keyCode {
             case 48: // Tab switches window mode before focus navigation consumes it.
                 if !event.isARepeat { self.toggle() }
@@ -1071,7 +1095,7 @@ struct TempoWidget: View {
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(InstrumentButtonStyle(radius: 8))
-                .help("Return to fdm-3 (Tab)")
+                .help("Return to fdm-3 (Tab or |)")
                 .accessibilityLabel("Return to full fdm-3 window")
             }
         }
