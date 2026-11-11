@@ -32,8 +32,9 @@ open dist/fdm-3.app
 | Space | Start / stop |
 | T | Tap tempo |
 | ↑ / ↓ | Tempo ±1 BPM |
+| Shift + ↑ / ↓ | Increase / decrease beats |
 | ← / → | Tempo ±10 BPM |
-| Tab | Toggle mini mode |
+| Tab or &#124; | Toggle mini mode |
 | Speaker icon | Mute / restore previous volume |
 
 Choose Subdivision, Gap, Sound, and Theme from the dropdowns. Press Return to apply a typed tempo or Escape to cancel; values are limited to 30–252 BPM. The LCD note symbol shows quarter notes, eighths, triplets, or sixteenths. Settings are remembered. Closing the main window quits the app.
