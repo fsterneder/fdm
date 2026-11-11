@@ -1178,10 +1178,14 @@ final class WindowModes: ObservableObject {
         mainWindow = window
         window.isReleasedWhenClosed = false
         self.model = model
-        // Set the running Dock icon explicitly as well as embedding it for Finder.
-        if let url = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
-           let icon = NSImage(contentsOf: url) {
-            NSApp.applicationIconImage = icon
+        // Load the source PNG for the running Dock icon independently of ICNS decoding.
+        // Finder uses the native ICNS generated and embedded by the build script.
+        for ext in ["png", "icns"] {
+            if let url = Bundle.main.url(forResource: "AppIcon", withExtension: ext),
+               let icon = NSImage(contentsOf: url), icon.isValid {
+                NSApp.applicationIconImage = icon
+                break
+            }
         }
         if let closeObserver { NotificationCenter.default.removeObserver(closeObserver) }
         closeObserver = NotificationCenter.default.addObserver(

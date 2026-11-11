@@ -24,16 +24,22 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>fdm-3</string>
 <key>CFBundleIconFile</key><string>AppIcon.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.8.2</string>
-<key>CFBundleVersion</key><string>11</string>
+<key>CFBundleShortVersionString</key><string>0.8.3</string>
+<key>CFBundleVersion</key><string>12</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
-cp Assets/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
+cp Assets/AppIcon.png "$app/Contents/Resources/AppIcon.png"
+xcrun swift scripts/make-icon.swift Assets/AppIcon.png "$app/Contents/Resources/AppIcon.icns"
 /usr/bin/sips -g format "$app/Contents/Resources/AppIcon.icns" >/dev/null
 codesign --force --deep --sign - "$app"
-ditto -c -k --sequesterRsrc --keepParent "$app" dist/fdm-3-0.8.2.zip
 touch "$app"
+# Register this freshly built bundle without resetting the user's icon caches.
+registrar="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+if [[ -x "$registrar" ]]; then
+  "$registrar" -f "$app" || echo "Launch Services will refresh the icon when the app is opened." >&2
+fi
+ditto -c -k --sequesterRsrc --keepParent "$app" dist/fdm-3-0.8.3.zip
 echo "Built $PWD/$app"
 echo "Run it: open dist/fdm-3.app"

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.3
+
+- Simplify the icon to the LCD metronome symbol in Dracula purple and pink, with its pendulum leaning right.
+- Generate the Finder icon with Apple's iconutil on every build and validate decoding.
+- Load the source PNG directly for the running Dock icon and register the rebuilt bundle.
+
 ## 0.8.2
 
 - Use neutral LCD colors for the animated metronome and subdivision notation.
