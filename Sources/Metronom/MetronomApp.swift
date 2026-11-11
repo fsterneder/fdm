@@ -235,7 +235,7 @@ struct HardwareLCD: View {
     var compact = false
     private let ink = Color(red: 0.08, green: 0.12, blue: 0.095)
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !model.playing || compact)) { timeline in
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !model.playing)) { timeline in
             Canvas { context, size in
                 let logical = compact ? CGSize(width: 140, height: 66) : CGSize(width: 280, height: 154)
                 context.scaleBy(x: size.width / logical.width, y: size.height / logical.height)
@@ -282,6 +282,12 @@ struct HardwareLCD: View {
                     context.stroke(symbol, with: .color(ink), lineWidth: 1.8)
                 }
                 let count = max(1, model.beats)
+                // With no accent the beat index is always zero, so show each pulse
+                // by briefly filling the marker instead of leaving it permanently filled.
+                let timeSinceBeat = max(0, timeline.date.timeIntervalSinceReferenceDate - model.beatTime)
+                let pulseDuration = min(0.14, (60 / Double(model.bpm)) * 0.45)
+                let pulseVisible = model.playing && model.currentBeat >= 0
+                    && timeSinceBeat < pulseDuration
                 let width: CGFloat = compact ? 9 : 18
                 let height: CGFloat = compact ? 9 : 19
                 let spacing: CGFloat = compact ? 4 : 7
@@ -293,8 +299,10 @@ struct HardwareLCD: View {
                     triangle.addLine(to: CGPoint(x: x + width, y: y + height / 2))
                     triangle.addLine(to: CGPoint(x: x, y: y + height))
                     triangle.closeSubpath()
-                    // The hardware fills the markers up to the current beat.
-                    if model.currentBeat >= 0 && index <= model.currentBeat {
+                    // Accented bars progress across markers; unaccented pulses flash.
+                    let filled = model.beats == 0
+                        ? pulseVisible : (model.currentBeat >= 0 && index <= model.currentBeat)
+                    if filled {
                         context.fill(triangle, with: .color(ink))
                     }
                     context.stroke(triangle, with: .color(ink), lineWidth: compact ? 0.8 : 1.2)
