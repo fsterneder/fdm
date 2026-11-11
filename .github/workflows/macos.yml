@@ -9,5 +9,5 @@ jobs:
       - run: bash scripts/build.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: Metronom-macOS
-          path: dist/Metronom-0.1.0.zip
+          name: fdm-3-macOS
+          path: dist/fdm-3-0.1.0.zip
