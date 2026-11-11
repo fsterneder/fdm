@@ -487,7 +487,7 @@ private enum LCDSegments {
 @MainActor
 struct HardwareLCD: View {
     @ObservedObject var model: Metronome
-    @State private var showingTempoEditor = false
+    @State private var editingTempo = false
     var compact = false
     var body: some View {
         // Read UI-isolated state here; Canvas and its local helpers only use snapshots.
@@ -504,6 +504,7 @@ struct HardwareLCD: View {
         let beatNumber = model.beatNumber
         let inSilentBar = model.inSilentBar
         let compact = self.compact
+        let hideTempoDigits = editingTempo
         return TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !playing)) { timeline in
             Canvas { context, size in
                 let logical = compact ? CGSize(width: 140, height: 66) : CGSize(width: 280, height: 154)
@@ -525,10 +526,10 @@ struct HardwareLCD: View {
                     }
                 }
                 if compact {
-                    number(bpm, places: 3, x: 9, y: 7, height: 38)
+                    if !hideTempoDigits { number(bpm, places: 3, x: 9, y: 7, height: 38) }
                     label(inSilentBar ? "GAP" : "TEMPO", x: 87, y: 32, size: 7)
                 } else {
-                    number(bpm, places: 3, x: 65, y: 16, height: 64)
+                    if !hideTempoDigits { number(bpm, places: 3, x: 65, y: 16, height: 64) }
                     number(beats, places: 1, x: 235, y: 16, height: 64)
                     label("TEMPO", x: 9, y: 67, size: 11)
                     label("BEAT", x: 194, y: 67, size: 11)
@@ -608,30 +609,40 @@ struct HardwareLCD: View {
                 let logical = compact ? CGSize(width: 140, height: 66) : CGSize(width: 280, height: 154)
                 let target = compact ? CGRect(x: 5, y: 4, width: 78, height: 44)
                     : CGRect(x: 60, y: 10, width: 125, height: 76)
-                Button {
-                    showingTempoEditor = true
-                } label: {
-                    Color.clear.contentShape(Rectangle())
+                Group {
+                    if editingTempo {
+                        InlineTempoField(
+                            bpm: bpm, color: ink,
+                            fontSize: (compact ? 38 : 64) * geometry.size.height / logical.height,
+                            onSet: { value in
+                                model.bpm = value
+                                editingTempo = false
+                                model.editingTempo = false
+                            },
+                            onCancel: {
+                                editingTempo = false
+                                model.editingTempo = false
+                            }
+                        )
+                    } else {
+                        Button {
+                            model.editingTempo = true
+                            editingTempo = true
+                        } label: {
+                            Color.clear.contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help("Click to edit tempo")
+                        .accessibilityLabel("Edit tempo")
+                        .accessibilityValue("\(bpm) beats per minute")
+                    }
                 }
-                .buttonStyle(.plain)
                 .frame(width: target.width * geometry.size.width / logical.width,
                        height: target.height * geometry.size.height / logical.height)
                 .position(x: target.midX * geometry.size.width / logical.width,
                           y: target.midY * geometry.size.height / logical.height)
-                .help("Click to enter tempo")
-                .accessibilityLabel("Edit tempo")
-                .accessibilityValue("\(bpm) beats per minute")
-                .popover(isPresented: $showingTempoEditor, arrowEdge: .bottom) {
-                    TempoEntry(bpm: model.bpm) { value in
-                        model.bpm = value
-                        showingTempoEditor = false
-                    } onCancel: {
-                        showingTempoEditor = false
-                    }
-                }
             }
         }
-        .onChange(of: showingTempoEditor) { model.editingTempo = $0 }
         .onDisappear { model.editingTempo = false }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("LCD")
@@ -639,40 +650,75 @@ struct HardwareLCD: View {
     }
 }
 
+// Native field overlays only the tempo digits; no popover or separate window.
 @MainActor
-struct TempoEntry: View {
-    @State private var text: String
-    @FocusState private var focused: Bool
+struct InlineTempoField: NSViewRepresentable {
+    let bpm: Int
+    let color: Color
+    let fontSize: CGFloat
     let onSet: (Int) -> Void
     let onCancel: () -> Void
-    init(bpm: Int, onSet: @escaping (Int) -> Void, onCancel: @escaping () -> Void) {
-        _text = State(initialValue: String(bpm))
-        self.onSet = onSet
-        self.onCancel = onCancel
-    }
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Tempo").font(.headline)
-            TextField("BPM", text: $text)
-                .font(.system(size: 24, design: .monospaced))
-                .textFieldStyle(.roundedBorder)
-                .focused($focused)
-                .onSubmit { apply() }
-                .accessibilityLabel("Tempo in beats per minute")
-            Text("30–252 BPM").font(.caption).foregroundColor(.secondary)
-            HStack {
-                Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction)
-                Spacer()
-                Button("Set", action: apply)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(Tempo.fromText(text) == nil)
-            }
+
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
+    func makeNSView(context: Context) -> NSTextField {
+        let field = NSTextField(string: String(bpm))
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.alignment = .right
+        field.maximumNumberOfLines = 1
+        field.cell?.isScrollable = true
+        field.font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .regular)
+        field.textColor = NSColor(color)
+        field.delegate = context.coordinator
+        field.setAccessibilityLabel("Tempo in beats per minute")
+        DispatchQueue.main.async {
+            guard let window = field.window else { return }
+            window.makeFirstResponder(field)
+            field.selectText(nil)
         }
-        .padding(16).frame(width: 210)
-        .onAppear { focused = true }
+        return field
     }
-    private func apply() {
-        if let value = Tempo.fromText(text) { onSet(value) }
+    func updateNSView(_ field: NSTextField, context: Context) {
+        context.coordinator.parent = self
+        field.font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .regular)
+        field.textColor = NSColor(color)
+        // Preserve the user's draft while playback refreshes the LCD.
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: InlineTempoField
+        private var finished = false
+        init(parent: InlineTempoField) { self.parent = parent }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+            guard let field = control as? NSTextField else { return false }
+            if selector == NSSelectorFromString("insertNewline:") {
+                finish(field, apply: true)
+                return true
+            }
+            if selector == NSSelectorFromString("cancelOperation:") {
+                finish(field, apply: false)
+                return true
+            }
+            return false
+        }
+        func controlTextDidEndEditing(_ notification: Notification) {
+            if let field = notification.object as? NSTextField { finish(field, apply: true) }
+        }
+        private func finish(_ field: NSTextField, apply: Bool) {
+            guard !finished else { return }
+            finished = true
+            let window = field.window
+            if apply, let value = Tempo.fromText(field.stringValue) {
+                parent.onSet(value)
+            } else {
+                parent.onCancel()
+            }
+            window?.makeFirstResponder(nil)
+        }
     }
 }
 
