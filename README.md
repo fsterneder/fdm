@@ -30,7 +30,7 @@ The build embeds a pre-rendered, multi-resolution macOS app icon for Finder and 
 
 ## Visual design
 
-Version 0.2.0 replaces the default bordered buttons with rounded hardware-style controls, a grey transport button that turns red during playback, custom sound selectors, compact pattern menus, a hardware-style grey-green LCD with symmetric vector seven-segment tempo and beat digits, a voice number, and triangular beat markers, and a calibrated tempo dial. Beat indicators use the same playback state in both window modes. The main LCD follows the KDM-3 reference layout: TEMPO, BEAT, and VOICE (1–3 for Click/Wood/Bright). Triangular markers fill through the current beat and return to outlines when stopped. The small metronome symbol swings with each audible beat, including when no accent is selected, and rests upright when stopped. Tempo digits and the BEAT label have separate columns to prevent overlap. The widget uses the same segmented digits and triangular markers in a compact LCD. The bundled icon and build number are updated; quit any older running copy before opening the rebuilt app.
+Version 0.2.0 replaces the default bordered buttons with rounded hardware-style controls, a grey transport button that turns red during playback, custom sound selectors, compact pattern menus, a hardware-style grey-green LCD with symmetric vector seven-segment tempo and beat digits, a voice number, and triangular beat markers, and a calibrated tempo dial. Beat indicators use the same playback state in both window modes. The main LCD follows the KDM-3 reference layout: TEMPO, BEAT, and VOICE (1–5 for Click/Wood/Bright/Clave/Soft Pulse). Triangular markers fill through the current beat and return to outlines when stopped. The small metronome symbol swings with each audible beat, including when no accent is selected, and rests upright when stopped. Tempo digits and the BEAT label have separate columns to prevent overlap. The widget uses the same segmented digits and triangular markers in a compact LCD. The bundled icon and build number are updated; quit any older running copy before opening the rebuilt app.
 
 ## Controls
 
@@ -39,6 +39,18 @@ Drag the dial up or right to increase tempo; down or left to decrease it. Use +/
 Beats sets the number of quarter-note pulses per bar (0 means no accent). Division adds 1–4 clicks per pulse. The first pulse has a higher pitch; subdivisions are quieter. Volume includes mute. Settings are remembered. Tempo and pattern changes restart the bar immediately. The app continues playing when another app is active, and quits completely when its main window closes. Switching to widget mode shows the floating panel before hiding the main window and keeps playback running. Automatic termination for the last window is disabled; the main window’s explicit close handler quits the app. The instrument window is retained for restoration from widget mode. The widget context menu also offers Quit.
 
 Audio clicks use AVAudioPlayerNode sample positions and a half-second scheduling horizon. The display follows playback completion and may lag audio by roughly the click length. Audio device switching and sleep/wake behavior need testing on real hardware. This first version does not include a tuner, clave patterns, or every KDM-3 function.
+
+## Voices
+
+The sound selector has two rows. The LCD VOICE number identifies the selected sound:
+
+1. Click — original digital click.
+2. Wood — original lower wooden tone.
+3. Bright — original high click.
+4. Clave — a short, bright wooden strike with inharmonic resonance.
+5. Soft Pulse — a low, rounded sine tone with smooth attack and release.
+
+All voices have a higher, louder first beat and quieter subdivisions. Existing voice numbers and saved selections remain compatible. New voices taper to silence and stay below the shortest subdivision interval. Waveform tests cover valid levels, silent endpoints, accent levels, and supported sample rates; they run with the macOS test workflow.
 
 ## Widget mode
 
