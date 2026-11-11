@@ -30,7 +30,7 @@ The build embeds a pre-rendered, multi-resolution macOS app icon for Finder and 
 
 ## Visual design
 
-Version 0.2.0 replaces the default bordered buttons with rounded hardware-style controls, a grey transport button that turns red during playback, custom sound selectors, compact pattern menus, a hardware-style grey-green LCD with symmetric vector seven-segment tempo and beat digits, a voice number, and triangular beat markers, and a calibrated tempo dial. Beat indicators use the same playback state in both window modes. The main LCD follows the KDM-3 reference layout: TEMPO, BEAT, and VOICE (1–5 for Click/Wood/Bright/Clave/Soft Pulse). Triangular markers fill through the current beat and return to outlines when stopped. The small metronome symbol swings with each audible beat, including when no accent is selected, and rests upright when stopped. Tempo digits and the BEAT label have separate columns to prevent overlap. The widget uses the same segmented digits and triangular markers in a compact LCD. The bundled icon and build number are updated; quit any older running copy before opening the rebuilt app.
+Version 0.2.0 replaces the default bordered buttons with rounded hardware-style controls, a grey transport button that turns red during playback, a compact sound dropdown, compact pattern menus, a hardware-style grey-green LCD with symmetric vector seven-segment tempo and beat digits, a voice number, and triangular beat markers, and a calibrated tempo dial. Beat indicators use the same playback state in both window modes. The main LCD follows the KDM-3 reference layout: TEMPO, BEAT, and VOICE (1–5 for Click/Wood/Bright/Clave/Soft Pulse). Triangular markers fill through the current beat and return to outlines when stopped. The small metronome symbol swings with each audible beat, including when no accent is selected, and rests upright when stopped. Tempo digits and the BEAT label have separate columns to prevent overlap. The widget uses the same segmented digits and triangular markers in a compact LCD. The bundled icon and build number are updated; quit any older running copy before opening the rebuilt app.
 
 ## Controls
 
@@ -42,7 +42,7 @@ Audio clicks use AVAudioPlayerNode sample positions and a half-second scheduling
 
 ## Voices
 
-The sound selector has two rows. The LCD VOICE number identifies the selected sound:
+The SOUND dropdown shows only the selected voice; open it to choose from all five voices. The current choice is checked in the menu. The LCD VOICE number identifies the selected sound:
 
 1. Click — original digital click.
 2. Wood — original lower wooden tone.
