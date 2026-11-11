@@ -371,18 +371,26 @@ private enum LCDSegments {
 struct HardwareLCD: View {
     @ObservedObject var model: Metronome
     var compact = false
-    private var palette: InstrumentPalette { model.theme.palette }
-    private var ink: Color {
-        model.theme == .charcoal ? Color(red: 0.08, green: 0.12, blue: 0.095) : palette.accent
-    }
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !model.playing)) { timeline in
+        // Read UI-isolated state here; Canvas and its local helpers only use snapshots.
+        let theme = model.theme
+        let palette = theme.palette
+        let ink = theme == .charcoal ? Color(red: 0.08, green: 0.12, blue: 0.095) : palette.accent
+        let bpm = model.bpm
+        let beats = model.beats
+        let sound = model.sound
+        let playing = model.playing
+        let currentBeat = model.currentBeat
+        let beatTime = model.beatTime
+        let beatNumber = model.beatNumber
+        let compact = self.compact
+        return TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !playing)) { timeline in
             Canvas { context, size in
                 let logical = compact ? CGSize(width: 140, height: 66) : CGSize(width: 280, height: 154)
                 context.scaleBy(x: size.width / logical.width, y: size.height / logical.height)
                 func label(_ text: String, x: CGFloat, y: CGFloat, size: CGFloat = 10) {
                     context.draw(Text(text).font(.system(size: size, weight: .medium))
-                        .foregroundColor(model.theme == .charcoal ? ink : palette.foreground), at: CGPoint(x: x, y: y), anchor: .topLeading)
+                        .foregroundColor(theme == .charcoal ? ink : palette.foreground), at: CGPoint(x: x, y: y), anchor: .topLeading)
                 }
                 func number(_ value: Int, places: Int, x: CGFloat, y: CGFloat, height: CGFloat) {
                     let chars = Array(String(value))
@@ -397,15 +405,15 @@ struct HardwareLCD: View {
                     }
                 }
                 if compact {
-                    number(model.bpm, places: 3, x: 9, y: 7, height: 38)
+                    number(bpm, places: 3, x: 9, y: 7, height: 38)
                     label("TEMPO", x: 87, y: 32, size: 7)
                 } else {
-                    number(model.bpm, places: 3, x: 65, y: 16, height: 64)
-                    number(model.beats, places: 1, x: 235, y: 16, height: 64)
+                    number(bpm, places: 3, x: 65, y: 16, height: 64)
+                    number(beats, places: 1, x: 235, y: 16, height: 64)
                     label("TEMPO", x: 9, y: 67, size: 11)
                     label("BEAT", x: 194, y: 67, size: 11)
                     label("VOICE", x: 47, y: 105, size: 10)
-                    number(model.sound + 1, places: 1, x: 101, y: 93, height: 29)
+                    number(sound + 1, places: 1, x: 101, y: 93, height: 29)
                     // The pendulum changes direction on every audible pulse, including unaccented mode.
                     var symbol = Path()
                     symbol.move(to: CGPoint(x: 11, y: 115))
@@ -413,21 +421,21 @@ struct HardwareLCD: View {
                     symbol.addLine(to: CGPoint(x: 23, y: 97))
                     symbol.addLine(to: CGPoint(x: 27, y: 115))
                     symbol.closeSubpath()
-                    let elapsed = max(0, timeline.date.timeIntervalSinceReferenceDate - model.beatTime)
-                    let phase = min(1, elapsed / (60 / Double(model.bpm)))
-                    let direction: Double = model.beatNumber.isMultiple(of: 2) ? -1 : 1
-                    let angle = model.playing && model.beatTime > 0
+                    let elapsed = max(0, timeline.date.timeIntervalSinceReferenceDate - beatTime)
+                    let phase = min(1, elapsed / (60 / Double(bpm)))
+                    let direction: Double = beatNumber.isMultiple(of: 2) ? -1 : 1
+                    let angle = playing && beatTime > 0
                         ? direction * cos(phase * .pi) * 0.5 : 0
                     symbol.move(to: CGPoint(x: 19, y: 112))
                     symbol.addLine(to: CGPoint(x: 19 + sin(angle) * 21, y: 112 - cos(angle) * 21))
                     context.stroke(symbol, with: .color(ink), lineWidth: 1.8)
                 }
-                let count = max(1, model.beats)
+                let count = max(1, beats)
                 // With no accent the beat index is always zero, so show each pulse
                 // by briefly filling the marker instead of leaving it permanently filled.
-                let timeSinceBeat = max(0, timeline.date.timeIntervalSinceReferenceDate - model.beatTime)
-                let pulseDuration = min(0.14, (60 / Double(model.bpm)) * 0.45)
-                let pulseVisible = model.playing && model.currentBeat >= 0
+                let timeSinceBeat = max(0, timeline.date.timeIntervalSinceReferenceDate - beatTime)
+                let pulseDuration = min(0.14, (60 / Double(bpm)) * 0.45)
+                let pulseVisible = playing && currentBeat >= 0
                     && timeSinceBeat < pulseDuration
                 let width: CGFloat = compact ? 9 : 18
                 let height: CGFloat = compact ? 9 : 19
@@ -441,8 +449,8 @@ struct HardwareLCD: View {
                     triangle.addLine(to: CGPoint(x: x, y: y + height))
                     triangle.closeSubpath()
                     // Accented bars progress across markers; unaccented pulses flash.
-                    let filled = model.beats == 0
-                        ? pulseVisible : (model.currentBeat >= 0 && index <= model.currentBeat)
+                    let filled = beats == 0
+                        ? pulseVisible : (currentBeat >= 0 && index <= currentBeat)
                     if filled {
                         context.fill(triangle, with: .color(ink))
                     }
@@ -456,10 +464,10 @@ struct HardwareLCD: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: compact ? 5 : 9))
         .overlay(RoundedRectangle(cornerRadius: compact ? 5 : 9)
-            .strokeBorder(model.theme == .charcoal ? .black.opacity(0.65) : palette.fieldBorder, lineWidth: compact ? 1 : 2))
+            .strokeBorder(theme == .charcoal ? .black.opacity(0.65) : palette.fieldBorder, lineWidth: compact ? 1 : 2))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("LCD")
-        .accessibilityValue("\(model.bpm) beats per minute, \(model.beats == 0 ? "no accent" : "\(model.beats) beats per bar"), voice \(model.sound + 1), \(model.playing ? "playing" : "stopped")")
+        .accessibilityValue("\(bpm) beats per minute, \(beats == 0 ? "no accent" : "\(beats) beats per bar"), voice \(sound + 1), \(playing ? "playing" : "stopped")")
     }
 }
 
