@@ -163,20 +163,27 @@ final class Metronome: ObservableObject {
 }
 
 enum InstrumentTheme: String, CaseIterable {
-    case charcoal, dracula, nord, gruvbox, githubLight
+    case charcoal, dracula, nord, gruvbox, githubLight, monokai, solarizedDark, solarizedLight
     var name: String {
         switch self {
-        case .charcoal: return "Charcoal"
+        case .charcoal: return "Default"
         case .dracula: return "Dracula"
         case .nord: return "Nord"
         case .gruvbox: return "Gruvbox"
         case .githubLight: return "GitHub Light"
+        case .monokai: return "Monokai"
+        case .solarizedDark: return "Solarized Dark"
+        case .solarizedLight: return "Solarized Light"
         }
+    }
+    static var ordered: [InstrumentTheme] {
+        [.charcoal] + allCases.filter { $0 != .charcoal }.sorted { $0.name < $1.name }
     }
     static func restored(_ value: String?) -> InstrumentTheme {
         if let value, let theme = InstrumentTheme(rawValue: value) { return theme }
         // Migrate preferences from the first, generic palette set.
         switch value {
+        case "default": return .charcoal
         case "midnight": return .nord
         case "forest": return .gruvbox
         case "burgundy": return .dracula
@@ -184,7 +191,7 @@ enum InstrumentTheme: String, CaseIterable {
         default: return .charcoal
         }
     }
-    var isLight: Bool { self == .githubLight }
+    var isLight: Bool { self == .githubLight || self == .solarizedLight }
     var colorScheme: ColorScheme { isLight ? .light : .dark }
     var palette: InstrumentPalette { InstrumentPalette(theme: self) }
 }
@@ -203,6 +210,9 @@ struct InstrumentPalette {
         case .nord: return color(0x2E3440)
         case .gruvbox: return color(0x282828)
         case .githubLight: return color(0xFFFFFF)
+        case .monokai: return color(0x272822)
+        case .solarizedDark: return color(0x002B36)
+        case .solarizedLight: return color(0xFDF6E3)
         }
     }
     var panel: Color {
@@ -212,6 +222,9 @@ struct InstrumentPalette {
         case .nord: return color(0x3B4252)
         case .gruvbox: return color(0x3C3836)
         case .githubLight: return color(0xF6F8FA)
+        case .monokai: return color(0x3E3D32)
+        case .solarizedDark: return color(0x073642)
+        case .solarizedLight: return color(0xEEE8D5)
         }
     }
     var accent: Color {
@@ -221,6 +234,9 @@ struct InstrumentPalette {
         case .nord: return color(0x88C0D0)
         case .gruvbox: return color(0xFABD2F)
         case .githubLight: return color(0x0969DA)
+        case .monokai: return color(0xA6E22E)
+        case .solarizedDark: return color(0x2AA198)
+        case .solarizedLight: return color(0x2AA198)
         }
     }
     var foreground: Color {
@@ -230,6 +246,9 @@ struct InstrumentPalette {
         case .nord: return color(0xECEFF4)
         case .gruvbox: return color(0xEBDBB2)
         case .githubLight: return color(0x24292F)
+        case .monokai: return color(0xF8F8F2)
+        case .solarizedDark: return color(0x93A1A1)
+        case .solarizedLight: return color(0x586E75)
         }
     }
     var muted: Color {
@@ -239,6 +258,9 @@ struct InstrumentPalette {
         case .nord: return color(0xD8DEE9)
         case .gruvbox: return color(0xBDAE93)
         case .githubLight: return color(0x57606A)
+        case .monokai: return color(0xCFCFC2)
+        case .solarizedDark: return color(0x93A1A1)
+        case .solarizedLight: return color(0x586E75)
         }
     }
     var controlTop: Color {
@@ -248,6 +270,9 @@ struct InstrumentPalette {
         case .nord: return color(0x434C5E)
         case .gruvbox: return color(0x3C3836)
         case .githubLight: return color(0xFFFFFF)
+        case .monokai: return color(0x414339)
+        case .solarizedDark: return color(0x073642)
+        case .solarizedLight: return color(0xEEE8D5)
         }
     }
     var controlBottom: Color {
@@ -257,6 +282,9 @@ struct InstrumentPalette {
         case .nord: return color(0x434C5E)
         case .gruvbox: return color(0x3C3836)
         case .githubLight: return color(0xFFFFFF)
+        case .monokai: return color(0x414339)
+        case .solarizedDark: return color(0x073642)
+        case .solarizedLight: return color(0xEEE8D5)
         }
     }
     var recess: Color { theme == .charcoal ? ink.opacity(0.65) : panel }
@@ -268,6 +296,24 @@ struct InstrumentPalette {
         case .nord: return color(0x4C566A)
         case .gruvbox: return color(0x665C54)
         case .githubLight: return color(0xD0D7DE)
+        case .monokai: return color(0x75715E)
+        case .solarizedDark: return color(0x586E75)
+        case .solarizedLight: return color(0x93A1A1)
+        }
+    }
+    var activeForeground: Color {
+        switch theme {
+        case .githubLight: return .white
+        case .solarizedLight: return color(0x002B36)
+        default: return ink
+        }
+    }
+    var labelAccent: Color { theme == .solarizedLight ? foreground : accent }
+    var lcdDigitColor: Color {
+        switch theme {
+        case .monokai: return color(0xAE81FF)
+        case .solarizedLight: return color(0x586E75)
+        default: return accent
         }
     }
     var bodyColors: [Color] { theme == .charcoal ? [panel, ink] : [ink, ink] }
@@ -307,11 +353,11 @@ struct InstrumentButtonStyle: ButtonStyle {
     var radius: CGFloat = 10
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundColor(accent ? Color.white : palette.foreground.opacity(theme == .charcoal ? 0.87 : 1))
+            .foregroundColor(accent ? palette.activeForeground : palette.foreground.opacity(theme == .charcoal ? 0.87 : 1))
             .background(
                 LinearGradient(
                     colors: accent
-                        ? [Finish.transportRed, Color(red: 0.66, green: 0.08, blue: 0.12)]
+                        ? [palette.accent, palette.accent]
                         : [palette.controlTop, palette.controlBottom],
                     startPoint: .top, endPoint: .bottom
                 ),
@@ -375,7 +421,7 @@ struct HardwareLCD: View {
         // Read UI-isolated state here; Canvas and its local helpers only use snapshots.
         let theme = model.theme
         let palette = theme.palette
-        let ink = theme == .charcoal ? Color(red: 0.08, green: 0.12, blue: 0.095) : palette.accent
+        let ink = theme == .charcoal ? Color(red: 0.08, green: 0.12, blue: 0.095) : palette.lcdDigitColor
         let bpm = model.bpm
         let beats = model.beats
         let sound = model.sound
@@ -495,7 +541,7 @@ struct ChoiceDropdown: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.system(size: 8, weight: .semibold)).tracking(1)
-                    .foregroundColor(theme == .charcoal ? palette.muted : palette.accent)
+                    .foregroundColor(theme == .charcoal ? palette.muted : palette.labelAccent)
                 HStack(spacing: 6) {
                     Text(selectedLabel)
                         .font(.system(size: 11, weight: .medium))
@@ -504,7 +550,7 @@ struct ChoiceDropdown: View {
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 8, weight: .semibold))
-                        .foregroundColor(theme == .charcoal ? palette.muted : palette.accent)
+                        .foregroundColor(theme == .charcoal ? palette.muted : palette.labelAccent)
                 }
             }
             .padding(.horizontal, 11)
@@ -588,7 +634,7 @@ struct InstrumentView: View {
             HStack {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("fdm-3").font(.system(size: 18, weight: .bold, design: .rounded))
-                        .tracking(-0.5).foregroundColor(model.theme == .charcoal ? palette.foreground.opacity(0.92) : palette.accent)
+                        .tracking(-0.5).foregroundColor(model.theme == .charcoal ? palette.foreground.opacity(0.92) : palette.labelAccent)
                     Text("METRONOME").font(.system(size: 8, weight: .medium))
                         .tracking(1.8).foregroundColor(palette.muted)
                 }
@@ -695,7 +741,7 @@ struct InstrumentView: View {
         ChoiceDropdown(
             title: "THEME", selectedID: model.theme.rawValue,
             selectedLabel: model.theme.name,
-            options: InstrumentTheme.allCases.map { DropdownChoice(id: $0.rawValue, label: $0.name) }
+            options: InstrumentTheme.ordered.map { DropdownChoice(id: $0.rawValue, label: $0.name) }
         ) { id in
             if let theme = InstrumentTheme(rawValue: id) { model.theme = theme }
         }
