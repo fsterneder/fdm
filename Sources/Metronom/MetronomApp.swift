@@ -30,7 +30,8 @@ struct MetronomApp: App {
             }
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Widget Mode") { windows.toggle() }
-                    .keyboardShortcut("m", modifiers: [.command, .shift])
+                    .keyboardShortcut(.tab, modifiers: [])
+                    .disabled(model.editingTempo)
             }
         }
     }
@@ -790,7 +791,7 @@ struct InstrumentView: View {
                         .frame(width: 32, height: 32)
                 }
                 .buttonStyle(InstrumentButtonStyle(radius: 16))
-                .help("Switch to floating mini metronome (⇧⌘M)")
+                .help("Switch to floating mini metronome (Tab)")
                 .accessibilityLabel("Enter widget mode")
             }
             HardwareLCD(model: model).frame(height: 154)
@@ -983,6 +984,8 @@ final class WindowModes: ObservableObject {
                   event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
             else { return event }
             switch event.keyCode {
+            case 48: // Tab switches window mode before focus navigation consumes it.
+                if !event.isARepeat { self.toggle() }
             case 49: // Space overrides focused button activation.
                 if !event.isARepeat { self.model?.toggle() }
             case 123: // Left overrides a focused slider or picker.
@@ -1068,7 +1071,7 @@ struct TempoWidget: View {
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(InstrumentButtonStyle(radius: 8))
-                .help("Return to fdm-3 (⇧⌘M)")
+                .help("Return to fdm-3 (Tab)")
                 .accessibilityLabel("Return to full fdm-3 window")
             }
         }
@@ -1082,7 +1085,8 @@ struct TempoWidget: View {
             Button("Tap Tempo") { model.tap() }
             Divider()
             Button("Show Full fdm-3") { showInstrument() }
-                .keyboardShortcut("m", modifiers: [.command, .shift])
+                .keyboardShortcut(.tab, modifiers: [])
+                    .disabled(model.editingTempo)
             Divider()
             Button("Quit fdm-3") { model.stop(); NSApp.terminate(nil) }
         }
