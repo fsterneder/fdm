@@ -5,6 +5,7 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
+      - run: swift test
       - run: bash scripts/build.sh
       - uses: actions/upload-artifact@v4
         with:
