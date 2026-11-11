@@ -537,19 +537,33 @@ struct HardwareLCD: View {
                     }
                 }
 
-                var symbol = Path()
-                symbol.move(to: CGPoint(x: 14.7, y: 108.3))
-                symbol.addLine(to: CGPoint(x: 21, y: 85))
-                symbol.addLine(to: CGPoint(x: 31.8, y: 85))
-                symbol.addLine(to: CGPoint(x: 38.4, y: 108.3))
-                symbol.closeSubpath()
+                // Tapered case with rounded corners, matching the approved symbol mockup.
+                var metronomeCase = Path()
+                metronomeCase.move(to: CGPoint(x: 23.6, y: 82.5))
+                metronomeCase.addLine(to: CGPoint(x: 29.4, y: 82.5))
+                metronomeCase.addQuadCurve(to: CGPoint(x: 31.1, y: 84.1), control: CGPoint(x: 30.8, y: 82.5))
+                metronomeCase.addLine(to: CGPoint(x: 38.3, y: 108.6))
+                metronomeCase.addQuadCurve(to: CGPoint(x: 36.8, y: 110.5), control: CGPoint(x: 38.9, y: 110.5))
+                metronomeCase.addLine(to: CGPoint(x: 16.2, y: 110.5))
+                metronomeCase.addQuadCurve(to: CGPoint(x: 14.7, y: 108.6), control: CGPoint(x: 14.1, y: 110.5))
+                metronomeCase.addLine(to: CGPoint(x: 21.9, y: 84.1))
+                metronomeCase.addQuadCurve(to: CGPoint(x: 23.6, y: 82.5), control: CGPoint(x: 22.2, y: 82.5))
+                metronomeCase.closeSubpath()
+                context.stroke(metronomeCase, with: .color(pendulumInk), lineWidth: 1.6)
+
                 let elapsed = max(0, timeline.date.timeIntervalSinceReferenceDate - beatTime)
                 let phase = min(1, elapsed / (60 / Double(bpm)))
                 let direction: Double = beatNumber.isMultiple(of: 2) ? -1 : 1
-                let angle = playing && beatTime > 0 ? direction * cos(phase * .pi) * 0.5 : 0
-                symbol.move(to: CGPoint(x: 26.5, y: 104.5))
-                symbol.addLine(to: CGPoint(x: 26.5 + sin(angle) * 24.2, y: 104.5 - cos(angle) * 24.2))
-                context.stroke(symbol, with: .color(pendulumInk), lineWidth: 1.8)
+                let angle = playing && beatTime > 0 ? direction * cos(phase * .pi) * 0.35 : 0
+                let pivot = CGPoint(x: 26.5, y: 103)
+                var pendulum = Path()
+                pendulum.move(to: pivot)
+                pendulum.addLine(to: CGPoint(x: pivot.x + sin(angle) * 13.5,
+                                             y: pivot.y - cos(angle) * 13.5))
+                context.stroke(pendulum, with: .color(pendulumInk), lineWidth: 1.6)
+                context.fill(Path(ellipseIn: CGRect(x: pivot.x - 2.3, y: pivot.y - 2.3,
+                                                    width: 4.6, height: 4.6)),
+                             with: .color(pendulumInk))
 
                 let count = max(1, beats)
                 let step = min(CGFloat(37.25), CGFloat(158) / CGFloat(count))

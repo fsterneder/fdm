@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.4
+
+- Match the mockup's animated metronome symbol: a tapered case with rounded corners and a round pendulum pivot.
+- Keep the arm inside the case and retain beat-synchronized motion in both display sizes.
+
 ## 0.9.3
 
 - Enlarge the tempo-wheel marker.
