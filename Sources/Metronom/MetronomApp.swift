@@ -604,13 +604,13 @@ struct InstrumentView: View {
         VStack(spacing: 12) {
             Button(action: showWidget) {
                 Image(systemName: "arrow.down.right.and.arrow.up.left")
-                    .font(.system(size: 14)).frame(width: 36, height: 32)
+                    .font(.system(size: 18, weight: .medium)).frame(width: 36, height: 32)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain).foregroundColor(palette.neutral)
             .help("Widget mode (Tab or \\)").accessibilityLabel("Enter widget mode")
             Button { showingSettings.toggle() } label: {
-                Image(systemName: "gearshape").font(.system(size: 17))
+                Image(systemName: "gearshape").font(.system(size: 17, weight: .medium))
                     .frame(width: 36, height: 32).contentShape(Rectangle())
             }
             .buttonStyle(.plain).foregroundColor(palette.neutral)
@@ -622,7 +622,7 @@ struct InstrumentView: View {
             }
             Button { model.accent.toggle() } label: {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(palette.neutral.opacity(model.accent ? 1 : 0.45))
                     .frame(width: 36, height: 32).contentShape(Rectangle())
                     .overlay(alignment: .trailing) {
@@ -636,7 +636,7 @@ struct InstrumentView: View {
             .accessibilityValue(model.accent ? "On" : "Off")
             Button { model.toggleMute() } label: {
                 Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
-                    .font(.system(size: 17)).frame(width: 36, height: 32)
+                    .font(.system(size: 17, weight: .medium)).frame(width: 36, height: 32)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain).foregroundColor(palette.neutral)

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.8
+
+- Balance the main control column’s icon sizes and use a consistent medium stroke weight, including a larger widget-mode symbol.
+
 ## 0.16.7
 
 - Align widget tempo, beats, and controls in explicit fixed-width groups with balanced spacing.
