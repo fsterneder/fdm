@@ -1,7 +1,7 @@
 # fdm-3
 Vibe coded metronome based on the KDM-3
 
-## App: Metronom
+## App: fdm-3
 
 A native macOS 13+ metronome inspired by the feel of a dedicated desktop instrument. Independent project; no Korg branding or sound samples.
 
@@ -16,15 +16,17 @@ A native macOS 13+ metronome inspired by the feel of a dedicated desktop instrum
 
    Wait for the installation to finish. Full Xcode is optional. A Swift 5.9+ toolchain and macOS SDK are required; if the installed tools are older, update them in System Settings → Software Update or install current Xcode.
 
-3. In Terminal type `cd ` (including the space), drag the Metronom folder onto Terminal, and press Return.
+3. In Terminal type `cd ` (including the space), drag the fdm-3 folder onto Terminal, and press Return.
 4. Run:
 
    ```sh
    bash scripts/build.sh
-   open dist/Metronom.app
+   open dist/fdm-3.app
    ```
 
 The build script compiles for your Mac's architecture, creates an app bundle, signs it locally, and makes a ZIP in `dist`. It does not install dependencies or change your security settings. You can move the app into Applications using Finder.
+
+The build also generates a custom macOS app icon for Finder and the Dock. The full window is now 320 points wide with tighter spacing and no decorative speaker grille. The bundle identifier is retained so existing tempo and sound preferences carry over.
 
 ## Controls
 
@@ -36,25 +38,25 @@ Audio clicks use AVAudioPlayerNode sample positions and a half-second scheduling
 
 ## Widget mode
 
-Click the small widget icon beside METRONOM, or press Shift–Command–M, to switch to a 160 × 88 floating window that displays only the tempo. It stays above ordinary app windows, including while another app is active. Drag the background to move it. Playback continues when switching modes.
+Click the small widget icon beside fdm-3, or press Shift–Command–M, to switch to a 168 × 72 floating window that displays the tempo with a visible expand button. It stays above ordinary app windows, including while another app is active. Drag the background to move it. Playback continues when switching modes.
 
-Right-click the widget for Start/Stop, Tap Tempo, or Show Full Metronome. Shift–Command–M also returns to the full instrument. Keyboard shortcuts apply while a metronome window is focused; they are not system-wide shortcuts. Space overrides focused button activation and holding it does not repeatedly toggle playback.
+Click the expand button to return to the full window. Right-click the widget for Start/Stop, Tap Tempo, or Show Full fdm-3e. Shift–Command–M also returns to the full instrument. Keyboard shortcuts apply while a metronome window is focused; they are not system-wide shortcuts. Space overrides focused button activation and holding it does not repeatedly toggle playback.
 
 ## Homebrew distribution
 
-There is no published tap or binary yet. Do not expect `brew install metronom` to work.
+There is no published tap or binary yet. Do not expect `brew install --cask fdm-3` to work.
 
 After testing the app on your Mac:
 
-1. Host the exact `dist/Metronom-0.1.0.zip` file at an HTTPS URL (for example, a GitHub release).
+1. Host the exact `dist/fdm-3-0.1.0.zip` file at an HTTPS URL (for example, a GitHub release).
 2. Generate a cask using that URL:
 
    ```sh
-   bash scripts/make-cask.sh https://YOUR-HOST/Metronom-0.1.0.zip
+   bash scripts/make-cask.sh https://YOUR-HOST/fdm-3-0.1.0.zip
    ```
 
-3. Put the generated `dist/Casks/metronom.rb` in a GitHub repository named `homebrew-metronom` under its `Casks` folder.
-4. Users can then run `brew install --cask YOUR-GITHUB-NAME/metronom/metronom`.
+3. Put the generated `dist/Casks/fdm-3.rb` in a GitHub repository named `homebrew-fdm-3` under its `Casks` folder.
+4. Users can then run `brew install --cask YOUR-GITHUB-NAME/fdm-3/fdm-3`.
 
 The archive targets the architecture of the Mac that builds it. An Intel build and Apple Silicon build require separate releases/cask architecture declarations, or a universal build. Local ad-hoc signing is sufficient for development. For smooth public distribution, sign with Developer ID and notarize with Apple **before** creating the release ZIP and generating its checksum. A downloaded, unnotarized build can be blocked by Gatekeeper; this project does not bypass that protection.
 
