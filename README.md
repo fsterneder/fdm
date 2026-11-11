@@ -34,7 +34,7 @@ Version 0.2.0 replaces the default bordered buttons with rounded hardware-style 
 
 ## Controls
 
-Drag the dial up or right to increase tempo; down or left to decrease it. Use the BEAT +/− buttons to change beats per bar from 0 (No accent) through 9. The dial and arrow keys adjust tempo. Space starts/stops, T taps tempo, Up/Down adjust tempo by 1 BPM, and Left/Right adjust it by 10 BPM while the app is active. Left/Right take priority over focused sliders and pickers. Tap two or more times; the last six taps are averaged. A pause longer than 2.1 seconds starts a fresh tap sequence.
+Drag the dial up or right to increase tempo; down or left to decrease it. Use the +/− buttons to change beats per bar from 0 (No accent) through 9. The dial and arrow keys adjust tempo. Space starts/stops, T taps tempo, Up/Down adjust tempo by 1 BPM, and Left/Right adjust it by 10 BPM while the app is active. Left/Right take priority over focused sliders and pickers. Tap two or more times; the last six taps are averaged. A pause longer than 2.1 seconds starts a fresh tap sequence.
 
 Beats sets the number of quarter-note pulses per bar (0 means no accent). Division adds 1–4 clicks per pulse. The first pulse has a higher pitch; subdivisions are quieter. Volume includes mute. Settings are remembered. Tempo and pattern changes restart the bar immediately. The app continues playing when another app is active, and quits completely when its main window closes. Switching to widget mode shows the floating panel before hiding the main window and keeps playback running. Automatic termination for the last window is disabled; the main window’s explicit close handler quits the app. The instrument window is retained for restoration from widget mode. The widget context menu also offers Quit.
 
@@ -42,7 +42,7 @@ Audio clicks use AVAudioPlayerNode sample positions and a half-second scheduling
 
 ## Themes
 
-The THEME dropdown offers Charcoal (the existing default), Midnight blue, Forest green, Burgundy, and White. Selection updates the full instrument and floating widget immediately and is remembered across launches. White uses dark text and light controls. The hardware LCD colors and red playback indication stay consistent. Changing theme does not restart playback.
+The settings use a 2 × 2 grid: Beats / Division, then Sound / Theme. Each card displays both its label and its selected value; clicking opens a native menu directly, with a checkmark on the current choice. The THEME dropdown offers Charcoal (the existing default), Dracula (purple), Nord (cyan/blue), Gruvbox (warm amber), and GitHub Light (white/blue). IDE-inspired palettes color the body, controls, dial, and dropdown accents. Selection updates the full instrument and floating widget immediately and is remembered across launches. GitHub Light uses dark text and light controls. Previous generic theme preferences migrate to the corresponding new palettes. The hardware LCD colors and red playback indication stay consistent. Changing theme does not restart playback.
 
 ## Voices
 
