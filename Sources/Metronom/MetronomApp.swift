@@ -833,76 +833,70 @@ struct InstrumentView: View {
     private var palette: InstrumentPalette { model.theme.palette }
     var showWidget: () -> Void
     @State private var dialStart: Int?
+    @State private var showingSettings = false
+
     var body: some View {
-        VStack(spacing: 14) {
-            HStack {
+        VStack(spacing: 16) {
+            HStack(spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("fdm-3").font(.system(size: 18, weight: .bold, design: .rounded))
-                        .tracking(-0.5).foregroundColor(model.theme == .charcoal ? palette.foreground.opacity(0.92) : palette.labelAccent)
+                        .tracking(-0.5)
+                        .foregroundColor(model.theme == .charcoal ? palette.foreground.opacity(0.92) : palette.labelAccent)
                     Text("METRONOME").font(.system(size: 8, weight: .medium))
                         .tracking(1.8).foregroundColor(palette.muted)
                 }
-                Spacer()
-                Button(action: showWidget) {
-                    Image(systemName: "arrow.down.right.and.arrow.up.left")
-                        .font(.system(size: 12, weight: .medium))
-                        .frame(width: 32, height: 32)
-                }
-                .buttonStyle(InstrumentButtonStyle(radius: 16))
-                .help("Switch to floating mini metronome (Tab or |)")
-                .accessibilityLabel("Enter widget mode")
-            }
-            HardwareLCD(model: model).frame(height: 154)
-
-            HStack(spacing: 0) {
-                tempoDial
-                Spacer(minLength: 36)
-                VStack(spacing: 12) {
-                    beatButton(delta: 1)
-                    beatButton(delta: -1)
-                }
-            }
-            .padding(.horizontal, 18)
-            .frame(maxWidth: .infinity)
-
-            HStack(spacing: 10) {
-                Button { model.tap() } label: {
-                    Text("TAP").font(.system(size: 11, weight: .semibold))
-                        .tracking(1.2).frame(width: 76, height: 42)
-                }.buttonStyle(InstrumentButtonStyle())
-                Button { model.toggle() } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: model.playing ? "stop.fill" : "play.fill")
-                            .font(.system(size: 10, weight: .semibold))
-                        Text(model.playing ? "STOP" : "START")
-                            .font(.system(size: 11, weight: .bold)).tracking(1.5)
-                    }.frame(maxWidth: .infinity).frame(height: 42)
-                }.buttonStyle(InstrumentButtonStyle(accent: model.playing))
-            }
-
-            VStack(spacing: 10) {
-                HStack(spacing: 8) {
-                    SubdivisionSelector(value: $model.subdivisions)
-                    gapSelector
-                }
-                HStack(spacing: 8) {
-                    soundSelector
-                    themeSelector
-                }
-                HStack(spacing: 10) {
-                    Button { model.toggleMute() } label: {
-                        Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
-                            .font(.system(size: 12))
-                            .foregroundColor(model.volume == 0 ? palette.accent : palette.muted)
+                Spacer(minLength: 8)
+                HStack(spacing: 6) {
+                    Button { model.tap() } label: {
+                        Text("TAP").font(.system(size: 8, weight: .bold))
                             .frame(width: 28, height: 28)
                     }
-                    .buttonStyle(.plain)
-                    .help(model.volume == 0 ? "Unmute" : "Mute")
-                    .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
-                    Slider(value: $model.volume, in: 0...1)
-                        .tint(palette.sliderTint).controlSize(.small).accessibilityLabel("Volume")
-                }.padding(.horizontal, 4)
+                    .buttonStyle(InstrumentButtonStyle(radius: 14))
+                    .help("Tap tempo (T)")
+                    .accessibilityLabel("Tap tempo")
+
+                    Button { showingSettings.toggle() } label: {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 12, weight: .medium))
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(InstrumentButtonStyle(radius: 14))
+                    .help("Settings")
+                    .accessibilityLabel("Settings")
+                    .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
+                        InstrumentSettings(model: model)
+                            .environment(\.instrumentTheme, model.theme)
+                            .preferredColorScheme(model.theme.colorScheme)
+                    }
+
+                    Button(action: showWidget) {
+                        Image(systemName: "arrow.down.right.and.arrow.up.left")
+                            .font(.system(size: 12, weight: .medium))
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(InstrumentButtonStyle(radius: 14))
+                    .help("Switch to floating mini metronome (Tab or |)")
+                    .accessibilityLabel("Enter widget mode")
+                }
             }
+
+            HardwareLCD(model: model).frame(height: 154)
+
+            HStack(spacing: 20) {
+                tempoDial
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        beatButton(delta: 1)
+                        muteButton
+                    }
+                    HStack(spacing: 12) {
+                        beatButton(delta: -1)
+                        transportButton
+                    }
+                }
+            }
+            .padding(.horizontal, 6)
+            .frame(maxWidth: .infinity)
         }
         .padding(18).frame(width: 320)
         .background(LinearGradient(colors: palette.bodyColors,
@@ -915,36 +909,28 @@ struct InstrumentView: View {
         } message: { Text(model.error ?? "") }
     }
 
-    private var gapSelector: some View {
-        ChoiceDropdown(
-            title: "GAP", selectedID: String(model.gap),
-            selectedLabel: GapCycle.label(for: model.gap),
-            options: GapCycle.options.map {
-                DropdownChoice(id: String($0), label: GapCycle.label(for: $0))
-            }
-        ) { id in
-            if let gap = Int(id), GapCycle.options.contains(gap) { model.gap = gap }
+    private var muteButton: some View {
+        Button { model.toggleMute() } label: {
+            Image(systemName: model.volume == 0 ? "speaker.slash.fill" : "speaker.wave.2")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundColor(model.volume == 0 ? palette.accent : palette.foreground)
+                .frame(width: 48, height: 48)
         }
+        .buttonStyle(InstrumentButtonStyle(radius: 24))
+        .help(model.volume == 0 ? "Unmute" : "Mute")
+        .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
+        .accessibilityValue(model.volume == 0 ? "Muted" : "Volume \(Int(model.volume * 100)) percent")
     }
 
-    private var soundSelector: some View {
-        ChoiceDropdown(
-            title: "SOUND", selectedID: String(model.sound),
-            selectedLabel: (ClickVoice(rawValue: model.sound) ?? .click).name,
-            options: ClickVoice.allCases.map { DropdownChoice(id: String($0.rawValue), label: $0.name) }
-        ) { id in
-            if let sound = Int(id) { model.sound = sound }
+    private var transportButton: some View {
+        Button { model.toggle() } label: {
+            Image(systemName: model.playing ? "stop.fill" : "play.fill")
+                .font(.system(size: 16, weight: .medium))
+                .frame(width: 48, height: 48)
         }
-    }
-
-    private var themeSelector: some View {
-        ChoiceDropdown(
-            title: "THEME", selectedID: model.theme.rawValue,
-            selectedLabel: model.theme.name,
-            options: InstrumentTheme.ordered.map { DropdownChoice(id: $0.rawValue, label: $0.name) }
-        ) { id in
-            if let theme = InstrumentTheme(rawValue: id) { model.theme = theme }
-        }
+        .buttonStyle(InstrumentButtonStyle(accent: model.playing, radius: 24))
+        .help(model.playing ? "Stop (Space)" : "Start (Space)")
+        .accessibilityLabel(model.playing ? "Stop metronome" : "Start metronome")
     }
 
     private var tempoDial: some View {
@@ -987,9 +973,9 @@ struct InstrumentView: View {
             Image(systemName: "triangle.fill")
                 .font(.system(size: 15, weight: .regular))
                 .rotationEffect(.degrees(delta > 0 ? 0 : 180))
-                .frame(width: 44, height: 44)
+                .frame(width: 48, height: 48)
         }
-        .buttonStyle(InstrumentButtonStyle(radius: 22))
+        .buttonStyle(InstrumentButtonStyle(radius: 24))
         .disabled(atLimit)
         .opacity(atLimit ? 0.4 : 1)
         .help(delta < 0 ? "Decrease beats per bar (Shift + ↓)" : "Increase beats per bar (Shift + ↑)")
@@ -998,6 +984,77 @@ struct InstrumentView: View {
     }
 }
 
+@MainActor
+struct InstrumentSettings: View {
+    @ObservedObject var model: Metronome
+    private var palette: InstrumentPalette { model.theme.palette }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Settings").font(.system(size: 15, weight: .semibold))
+                .foregroundColor(palette.foreground)
+            VStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    SubdivisionSelector(value: $model.subdivisions)
+                    gapSelector
+                }
+                HStack(spacing: 8) {
+                    soundSelector
+                    themeSelector
+                }
+            }
+            HStack(spacing: 10) {
+                Button { model.toggleMute() } label: {
+                    Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
+                        .font(.system(size: 12))
+                        .foregroundColor(model.volume == 0 ? palette.accent : palette.muted)
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .help(model.volume == 0 ? "Unmute" : "Mute")
+                .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
+                Slider(value: $model.volume, in: 0...1)
+                    .tint(palette.sliderTint).controlSize(.small).accessibilityLabel("Volume")
+            }
+        }
+        .padding(16).frame(width: 300)
+        .background(LinearGradient(colors: palette.bodyColors,
+                                  startPoint: .topLeading, endPoint: .bottomTrailing))
+    }
+
+    private var gapSelector: some View {
+        ChoiceDropdown(
+            title: "GAP", selectedID: String(model.gap),
+            selectedLabel: GapCycle.label(for: model.gap),
+            options: GapCycle.options.map {
+                DropdownChoice(id: String($0), label: GapCycle.label(for: $0))
+            }
+        ) { id in
+            if let gap = Int(id), GapCycle.options.contains(gap) { model.gap = gap }
+        }
+    }
+
+    private var soundSelector: some View {
+        ChoiceDropdown(
+            title: "SOUND", selectedID: String(model.sound),
+            selectedLabel: (ClickVoice(rawValue: model.sound) ?? .click).name,
+            options: ClickVoice.allCases.map { DropdownChoice(id: String($0.rawValue), label: $0.name) }
+        ) { id in
+            if let sound = Int(id) { model.sound = sound }
+        }
+    }
+
+    private var themeSelector: some View {
+        ChoiceDropdown(
+            title: "THEME", selectedID: model.theme.rawValue,
+            selectedLabel: model.theme.name,
+            options: InstrumentTheme.ordered.map { DropdownChoice(id: $0.rawValue, label: $0.name) }
+        ) { id in
+            if let theme = InstrumentTheme(rawValue: id) { model.theme = theme }
+        }
+    }
+
+
+}
 
 // Route transport and tempo shortcuts before focused controls consume them.
 // This monitor is local to this app and does not require accessibility permission.

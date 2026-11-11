@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0
+
+- Compact the main window to its header, LCD, wheel, and four round controls.
+- Place Tap, Settings, and widget controls in the header.
+- Put beat up/down, mute, and themed Start/Stop beside the wheel.
+- Move subdivision, gap, sound, theme, and volume into the Settings popover.
+- Update the native app icon to match the four-button layout.
+
 ## 0.5.0
 
 - Move the larger tempo wheel to the left.

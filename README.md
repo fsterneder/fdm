@@ -37,7 +37,7 @@ open dist/fdm-3.app
 | Tab or &#124; | Toggle mini mode |
 | Speaker icon | Mute / restore previous volume |
 
-Choose Subdivision, Gap, Sound, and Theme from the dropdowns. Click the BPM digits to edit them in place. Return or clicking away applies the value; Escape cancels. Invalid text restores the previous tempo; values are limited to 30–252 BPM. The LCD note symbol shows quarter notes, eighths, triplets, or sixteenths. Settings are remembered. Closing the main window quits the app.
+Use the gear button for Subdivision, Gap, Sound, Theme, and volume. Tap tempo is in the header; the four round buttons beside the wheel control beats, mute, and Start/Stop. Click the BPM digits to edit them in place. Return or clicking away applies the value; Escape cancels. Invalid text restores the previous tempo; values are limited to 30–252 BPM. The LCD note symbol shows quarter notes, eighths, triplets, or sixteenths. Settings are remembered. Closing the main window quits the app.
 
 ## Gap practice
 
