@@ -5,6 +5,10 @@ import TempoCore
 enum DisplayGeometry {
     static let width: CGFloat = 468
     static let mainHeight: CGFloat = 234
+    static let mainBeatDiameter: CGFloat = 68
+    static let mainBeatSpacing: CGFloat = 24
+    // Match the outer metric centers to beats 1 and 4 of the reference row.
+    static let metricColumnWidth: CGFloat = 1.5 * (mainBeatDiameter + mainBeatSpacing)
     static let widgetScale: CGFloat = 1.15
     static let widgetWidth: CGFloat = 266 * widgetScale
     static let widgetHeight: CGFloat = 40 * widgetScale
@@ -48,7 +52,7 @@ struct ModernReadout: View {
         GeometryReader { geometry in
             let scale = min(geometry.size.width / DisplayGeometry.width,
                             geometry.size.height / DisplayGeometry.mainHeight)
-            let column = DisplayGeometry.width / 3 * scale
+            let column = DisplayGeometry.metricColumnWidth * scale
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
                     VStack(spacing: 2 * scale) {
@@ -101,9 +105,9 @@ struct ModernReadout: View {
                         setGap(index: gapIndex + (direction == .increment ? 1 : -1))
                     }
                 }
-                .frame(height: 112 * scale)
+                .frame(width: DisplayGeometry.width * scale, height: 112 * scale)
                 .padding(.bottom, 28 * scale)
-                BeatLights(model: model, width: DisplayGeometry.width * scale, maxDiameter: 68 * scale, spacing: 24 * scale)
+                BeatLights(model: model, width: DisplayGeometry.width * scale, maxDiameter: DisplayGeometry.mainBeatDiameter * scale, spacing: DisplayGeometry.mainBeatSpacing * scale)
                     .frame(height: 68 * scale)
                 // An unconditional slot keeps the beat and metric rows fixed.
                 Color.clear

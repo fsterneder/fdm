@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.10
+
+- Align the main metrics to a four-beat reference: BPM over beat one, Subdivision between beats two and three, Gap over beat four.
+- Keep metric positions fixed when changing meter, with other beat counts centered below.
+
 ## 0.16.9
 
 - Make the widget speaker always visible and clickable to mute or restore the previous volume.
