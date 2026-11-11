@@ -4,6 +4,8 @@ A compact macOS metronome inspired by the Korg KDM-3.
 
 30–252 BPM, tap tempo, subdivisions, five voices, IDE/Vim themes, and an always-on-top mini mode.
 
+<img src="docs/images/fdm-3.png" alt="fdm-3 in the Default theme" width="304">
+
 ## Build and run
 
 Requires macOS 13+ and Apple Command Line Tools with Swift 5.9+. Full Xcode is optional.
