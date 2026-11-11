@@ -40,7 +40,7 @@ Audio clicks use AVAudioPlayerNode sample positions and a half-second scheduling
 
 Click the small widget icon beside fdm-3, or press Shift–Command–M, to switch to a 168 × 72 floating window that displays the tempo with a visible expand button. It stays above ordinary app windows, including while another app is active. Drag the background to move it. Playback continues when switching modes.
 
-Click the expand button to return to the full window. Right-click the widget for Start/Stop, Tap Tempo, or Show Full fdm-3e. Shift–Command–M also returns to the full instrument. Keyboard shortcuts apply while a metronome window is focused; they are not system-wide shortcuts. Space overrides focused button activation and holding it does not repeatedly toggle playback.
+Click the expand button to return to the full window. Right-click the widget for Start/Stop, Tap Tempo, or Show Full fdm-3. Shift–Command–M also returns to the full instrument. Keyboard shortcuts apply while a metronome window is focused; they are not system-wide shortcuts. Space overrides focused button activation and holding it does not repeatedly toggle playback.
 
 ## Homebrew distribution
 
