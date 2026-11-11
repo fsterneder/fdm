@@ -37,7 +37,7 @@ open dist/fdm-3.app
 | Tab or &#124; | Toggle mini mode |
 | Speaker icon | Mute / restore previous volume |
 
-Choose Subdivision, Gap, Sound, and Theme from the dropdowns. Press Return to apply a typed tempo or Escape to cancel; values are limited to 30–252 BPM. The LCD note symbol shows quarter notes, eighths, triplets, or sixteenths. Settings are remembered. Closing the main window quits the app.
+Choose Subdivision, Gap, Sound, and Theme from the dropdowns. Click the BPM digits to edit them in place. Return or clicking away applies the value; Escape cancels. Invalid text restores the previous tempo; values are limited to 30–252 BPM. The LCD note symbol shows quarter notes, eighths, triplets, or sixteenths. Settings are remembered. Closing the main window quits the app.
 
 ## Gap practice
 
