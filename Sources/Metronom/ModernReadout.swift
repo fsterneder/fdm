@@ -226,10 +226,12 @@ private struct BeatLights: View {
     let maxDiameter: CGFloat
     let spacing: CGFloat
     var outlineOpacity: Double = 1
+    var colorSilentBars = false
     var body: some View {
         // Preview meter edits immediately while audio completes the current bar.
         let count = max(1, model.beats)
         let playing = model.playing
+        let silent = colorSilentBars && playing && model.inSilentBar
         let accent = model.accent
         let current = model.currentBeat >= 0 ? model.currentBeat % count : -1
         let beatTime = model.beatTime
@@ -244,8 +246,8 @@ private struct BeatLights: View {
                 ForEach(0..<count, id: \.self) { index in
                     let isCurrent = count == 1 ? pulse : playing && current == index
                     let isPlayed = count > 1 && playing && current >= 0 && index < current
-                    let isAccented = accent && index == 0
-                    let color = isAccented ? palette.action : (isCurrent ? palette.playingBeat : palette.neutral)
+                    let isAccented = accent && index == 0 && !silent
+                    let color = silent ? palette.gap : (isAccented ? palette.action : (isCurrent ? palette.playingBeat : palette.neutral))
                     let highlight = LinearGradient(
                         colors: isAccented && isCurrent ? [palette.action, palette.playingBeat] : [color, color],
                         startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -255,7 +257,7 @@ private struct BeatLights: View {
                             .opacity(isCurrent || isPlayed ? 1 : outlineOpacity))
                         .frame(width: diameter, height: diameter)
                         .accessibilityLabel("\(isAccented ? "Accented beat" : "Beat") \(index + 1) of \(count)")
-                        .accessibilityValue(isCurrent ? "Current" : (isPlayed ? "Played" : "Upcoming"))
+                        .accessibilityValue((silent ? "Silent gap, " : "") + (isCurrent ? "Current" : (isPlayed ? "Played" : "Upcoming")))
                 }
             }
             .frame(maxWidth: .infinity)
@@ -281,7 +283,7 @@ struct CompactReadout: View {
                     .accessibilityHidden(true)
             }
             .fixedSize(horizontal: true, vertical: false)
-            BeatLights(model: model, width: beatWidth, maxDiameter: 20, spacing: 5, outlineOpacity: 0.8)
+            BeatLights(model: model, width: beatWidth, maxDiameter: 20, spacing: 5, outlineOpacity: 0.8, colorSilentBars: true)
                 .frame(width: beatWidth, height: 32)
         }
         .padding(.leading, 8)

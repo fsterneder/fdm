@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.4
+
+- Use the theme’s Gap color for all widget beat circles during silent bars, preserving filled progress and outlined upcoming beats.
+- Keep normal widget colors when only muted, and restore them when audible bars resume.
+
 ## 0.16.3
 
 - Show the third beat as current in the Dock and bundled app icons.
