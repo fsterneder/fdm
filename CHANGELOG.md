@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.2
+
+- Use neutral LCD colors for the animated metronome and subdivision notation.
+- Thicken beat marker outlines in both window modes.
+- Match the logo to the tempo color across themes.
+- Replace the app icon with Dracula artwork.
+
 ## 0.8.1
 
 - Match the approved LCD mockup's aspect ratio, digit proportions, label positions, and bottom-row symbols at both sizes.

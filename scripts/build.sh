@@ -24,8 +24,8 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>fdm-3</string>
 <key>CFBundleIconFile</key><string>AppIcon.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.8.1</string>
-<key>CFBundleVersion</key><string>10</string>
+<key>CFBundleShortVersionString</key><string>0.8.2</string>
+<key>CFBundleVersion</key><string>11</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
@@ -33,7 +33,7 @@ PLIST
 cp Assets/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
 /usr/bin/sips -g format "$app/Contents/Resources/AppIcon.icns" >/dev/null
 codesign --force --deep --sign - "$app"
-ditto -c -k --sequesterRsrc --keepParent "$app" dist/fdm-3-0.8.1.zip
+ditto -c -k --sequesterRsrc --keepParent "$app" dist/fdm-3-0.8.2.zip
 touch "$app"
 echo "Built $PWD/$app"
 echo "Run it: open dist/fdm-3.app"

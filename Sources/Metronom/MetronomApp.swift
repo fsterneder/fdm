@@ -561,8 +561,8 @@ struct HardwareLCD: View {
         let beatInk = palette.beatColor
         let labelInk = palette.lcdLabelColor
         let markerInk = palette.lcdSymbolColor
-        let pendulumInk = palette.lcdSymbolColor
-        let noteInk = palette.lcdSymbolColor
+        let pendulumInk = palette.lcdLabelColor
+        let noteInk = palette.lcdLabelColor
         let gapInk = palette.lcdSymbolColor
         let borderInk = palette.lcdBorder
         let captionCapHeight = NSFont.systemFont(ofSize: 12.5, weight: .semibold).capHeight
@@ -677,7 +677,7 @@ struct HardwareLCD: View {
                     let filled = beats == 0
                         ? pulseVisible : (currentBeat >= 0 && index <= currentBeat)
                     if filled { context.fill(triangle, with: .color(markerInk)) }
-                    context.stroke(triangle, with: .color(markerInk), lineWidth: 1.2)
+                    context.stroke(triangle, with: .color(markerInk), lineWidth: 1.7)
                 }
             }
         }
@@ -945,7 +945,7 @@ struct InstrumentView: View {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("fdm-3").font(.system(size: 18, weight: .bold, design: .rounded))
                         .tracking(-0.5)
-                        .foregroundColor(model.theme == .charcoal ? palette.foreground.opacity(0.92) : palette.labelAccent)
+                        .foregroundColor(palette.lcdDigitColor)
                     Text("METRONOME").font(.system(size: 8, weight: .medium))
                         .tracking(1.8).foregroundColor(palette.muted)
                 }
