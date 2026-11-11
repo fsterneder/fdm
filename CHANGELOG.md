@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.3
+
+- Enlarge the tempo-wheel marker.
+- Color the idle Start symbol and fdm-3 logo with the theme's playback accent.
+- Keep active Stop filled with the accent color and regular buttons neutral.
+- Replace subdivision notation with GAP during silent bars in both display sizes.
+
 ## 0.9.2
 
 - Restore Default's green LCD, dark monochrome display ink, charcoal controls, and orange wheel pointer.

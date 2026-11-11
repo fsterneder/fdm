@@ -454,7 +454,6 @@ struct HardwareLCD: View {
         let gapInk = palette.lcdNeutral
         let borderInk = palette.lcdBorder
         let captionCapHeight = NSFont.systemFont(ofSize: 12.5, weight: .semibold).capHeight
-        let gapCapHeight = NSFont.systemFont(ofSize: 8.5, weight: .semibold).capHeight
         let tripletCapHeight = NSFont.systemFont(ofSize: 7.5, weight: .semibold).capHeight
         let bpm = model.bpm
         let subdivisions = model.subdivisions
@@ -489,7 +488,7 @@ struct HardwareLCD: View {
                     let resolved = context.resolve(Text(text).font(.system(size: size, weight: .semibold))
                         .foregroundColor(tint ?? labelInk))
                     let baseline = resolved.firstBaseline(in: CGSize(width: 1000, height: 1000))
-                    let capHeight = size == 12.5 ? captionCapHeight : (size == 8.5 ? gapCapHeight : tripletCapHeight)
+                    let capHeight = size == 12.5 ? captionCapHeight : tripletCapHeight
                     // Place the visible capitals at the measured coordinate, not the font's line box.
                     context.draw(resolved, at: CGPoint(x: x, y: y - baseline + capHeight), anchor: .topLeading)
                 }
@@ -513,26 +512,29 @@ struct HardwareLCD: View {
                 number(beats, places: 1, x: 232.46, y: 11.65, height: 60.75, widthScale: 1.036, tint: beatInk)
                 label("TEMPO", x: 17, y: 51.2, size: 12.5)
                 label("BEAT", x: 187.7, y: 51.5, size: 12.5)
-                if inSilentBar { label("GAP", x: 191, y: 75, size: 8.5, tint: gapInk) }
-
-                // Subdivision notation shares the bottom baseline with beat markers.
-                let stems: [CGFloat] = subdivisions == 1 ? [251] : (subdivisions == 3 ? [236, 248.5, 261] : [239, 261])
-                for x in stems {
-                    context.fill(Path(ellipseIn: CGRect(x: x - 8, y: 104.5, width: 9, height: 6)),
-                                 with: .color(noteInk))
-                    var stem = Path()
-                    stem.move(to: CGPoint(x: x, y: 107))
-                    stem.addLine(to: CGPoint(x: x, y: 86))
-                    context.stroke(stem, with: .color(noteInk), lineWidth: 1.7)
-                }
-                if subdivisions > 1, let first = stems.first, let last = stems.last {
-                    context.fill(Path(CGRect(x: first, y: 84, width: last - first + 1, height: 3)),
-                                 with: .color(noteInk))
-                    if subdivisions == 4 {
-                        context.fill(Path(CGRect(x: first, y: 90, width: last - first + 1, height: 3)),
+                // GAP replaces notation during the silent bar, without changing the selected subdivision.
+                if inSilentBar {
+                    label("GAP", x: 232, y: 93, size: 12.5, tint: gapInk)
+                } else {
+                    // Subdivision notation shares the bottom baseline with beat markers.
+                    let stems: [CGFloat] = subdivisions == 1 ? [251] : (subdivisions == 3 ? [236, 248.5, 261] : [239, 261])
+                    for x in stems {
+                        context.fill(Path(ellipseIn: CGRect(x: x - 8, y: 104.5, width: 9, height: 6)),
                                      with: .color(noteInk))
+                        var stem = Path()
+                        stem.move(to: CGPoint(x: x, y: 107))
+                        stem.addLine(to: CGPoint(x: x, y: 86))
+                        context.stroke(stem, with: .color(noteInk), lineWidth: 1.7)
                     }
-                    if subdivisions == 3 { label("3", x: 246, y: 74, size: 7.5, tint: noteInk) }
+                    if subdivisions > 1, let first = stems.first, let last = stems.last {
+                        context.fill(Path(CGRect(x: first, y: 84, width: last - first + 1, height: 3)),
+                                     with: .color(noteInk))
+                        if subdivisions == 4 {
+                            context.fill(Path(CGRect(x: first, y: 90, width: last - first + 1, height: 3)),
+                                         with: .color(noteInk))
+                        }
+                        if subdivisions == 3 { label("3", x: 246, y: 74, size: 7.5, tint: noteInk) }
+                    }
                 }
 
                 var symbol = Path()
@@ -832,7 +834,7 @@ struct InstrumentView: View {
             HStack(spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("fdm-3")
-                        .foregroundColor(palette.neutral)
+                        .foregroundColor(palette.action)
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .tracking(-0.5)
                         .accessibilityLabel("fdm-3")
@@ -920,6 +922,7 @@ struct InstrumentView: View {
         Button { model.toggle() } label: {
             Image(systemName: model.playing ? "stop.fill" : "play.fill")
                 .font(.system(size: 16, weight: .medium))
+                .foregroundColor(model.playing ? palette.activeForeground : palette.action)
                 .frame(width: 48, height: 48)
         }
         .buttonStyle(InstrumentButtonStyle(accent: model.playing, radius: 24))
@@ -935,8 +938,8 @@ struct InstrumentView: View {
                 .frame(width: 120, height: 120)
                 .overlay(Circle().strokeBorder(palette.neutral.opacity(0.14)))
                 .shadow(color: palette.background.opacity(0.5), radius: 4, y: 4)
-            Capsule().fill(palette.tempo).frame(width: 4, height: 19)
-                .offset(y: -42)
+            Capsule().fill(palette.tempo).frame(width: 6, height: 26)
+                .offset(y: -39)
                 .rotationEffect(.degrees(-135 + Double(model.bpm - 30) / 222 * 270))
         }
         .frame(width: 144, height: 144)
