@@ -34,6 +34,12 @@ Beats sets the number of quarter-note pulses per bar (0 means no accent). Divisi
 
 Audio clicks use AVAudioPlayerNode sample positions and a half-second scheduling horizon. The display follows playback completion and may lag audio by roughly the click length. Audio device switching and sleep/wake behavior need testing on real hardware. This first version does not include a tuner, clave patterns, or every KDM-3 function.
 
+## Widget mode
+
+Click the small widget icon beside METRONOM, or press Shift–Command–M, to switch to a 160 × 88 floating window that displays only the tempo. It stays above ordinary app windows, including while another app is active. Drag the background to move it. Playback continues when switching modes.
+
+Right-click the widget for Start/Stop, Tap Tempo, or Show Full Metronome. Shift–Command–M also returns to the full instrument. Keyboard shortcuts apply while a metronome window is focused; they are not system-wide shortcuts. Space overrides focused button activation and holding it does not repeatedly toggle playback.
+
 ## Homebrew distribution
 
 There is no published tap or binary yet. Do not expect `brew install metronom` to work.
