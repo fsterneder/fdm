@@ -24,7 +24,7 @@ A native macOS 13+ metronome inspired by the feel of a dedicated desktop instrum
    open dist/Metronom.app
    ```
 
-The build script runs the tests, compiles for your Mac's architecture, creates an app bundle, signs it locally, and makes a ZIP in `dist`. It does not install dependencies or change your security settings. You can move the app into Applications using Finder.
+The build script compiles for your Mac's architecture, creates an app bundle, signs it locally, and makes a ZIP in `dist`. It does not install dependencies or change your security settings. You can move the app into Applications using Finder.
 
 ## Controls
 
@@ -54,4 +54,4 @@ The archive targets the architecture of the Mac that builds it. An Intel build a
 
 ## Validation status
 
-Source prepared on Linux, where Apple's SwiftUI/AVFoundation SDKs are unavailable. Native compilation, Swift tests, listening tests, and UI checks have not run here. `scripts/build.sh` performs compilation and tests on your Mac; the included GitHub Actions workflow does the same on a macOS runner when uploaded to a repository.
+Source prepared on Linux, where Apple's SwiftUI/AVFoundation SDKs are unavailable. Native compilation, Swift tests, listening tests, and UI checks have not run here. `scripts/build.sh` compiles and packages the app on your Mac. Tests run separately with `swift test` using full Xcode, which provides XCTest; Command Line Tools alone may not include it. The included GitHub Actions workflow runs tests before building on a macOS runner.
