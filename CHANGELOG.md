@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+
+- Move the larger tempo wheel to the left.
+- Stack circular beat controls on the right: up triangle above down triangle.
+- Update the app icon to reflect the same hardware layout.
+- Package the multi-resolution icon directly as an ICNS asset.
+
 ## 0.4.0
 
 - Gap now sets how many audible bars play before exactly one silent bar.

@@ -27,8 +27,8 @@ open dist/fdm-3.app
 
 | Control | Action |
 | --- | --- |
-| Dial / click BPM | Adjust tempo / type a value |
-| − / + | Change beats: No accent, then 2–9 |
+| Left dial / click BPM | Adjust tempo / type a value |
+| ▲ / ▼ | Change beats: No accent, then 2–9 |
 | Space | Start / stop |
 | T | Tap tempo |
 | ↑ / ↓ | Tempo ±1 BPM |

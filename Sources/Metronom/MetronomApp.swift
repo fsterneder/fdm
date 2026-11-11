@@ -795,37 +795,16 @@ struct InstrumentView: View {
             }
             HardwareLCD(model: model).frame(height: 154)
 
-            HStack(spacing: 24) {
-                beatButton("minus", delta: -1)
-                ZStack {
-                    ForEach(0..<31, id: \.self) { index in
-                        Capsule().fill(palette.foreground.opacity(index % 5 == 0 ? 0.32 : 0.10))
-                            .frame(width: 1.5, height: index % 5 == 0 ? 5 : 3)
-                            .offset(y: -41)
-                            .rotationEffect(.degrees(-135 + Double(index) * 9))
-                    }
-                    Circle().fill(LinearGradient(colors: [palette.dialTop, palette.dialBottom],
-                                                 startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 68, height: 68)
-                        .overlay(Circle().strokeBorder(palette.border.opacity(0.14)))
-                        .shadow(color: .black.opacity(0.5), radius: 3, y: 3)
-                    Capsule().fill(palette.accent).frame(width: 3, height: 12)
-                        .offset(y: -23)
-                        .rotationEffect(.degrees(-135 + Double(model.bpm - 30) / 222 * 270))
+            HStack(spacing: 0) {
+                tempoDial
+                Spacer(minLength: 36)
+                VStack(spacing: 12) {
+                    beatButton(delta: 1)
+                    beatButton(delta: -1)
                 }
-                .frame(width: 88, height: 88).contentShape(Circle())
-                .gesture(DragGesture(minimumDistance: 0).onChanged { value in
-                    if dialStart == nil { dialStart = model.bpm }
-                    model.bpm = Tempo.clamp((dialStart ?? model.bpm)
-                        + Int((value.translation.width - value.translation.height) / 3))
-                }.onEnded { _ in dialStart = nil })
-                .accessibilityElement().accessibilityLabel("Tempo dial")
-                .accessibilityValue("\(model.bpm) beats per minute")
-                .accessibilityAdjustableAction { direction in
-                    model.bpm += direction == .increment ? 1 : -1
-                }
-                beatButton("plus", delta: 1)
-            }.frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity)
 
             HStack(spacing: 10) {
                 Button { model.tap() } label: {
@@ -909,17 +888,51 @@ struct InstrumentView: View {
         }
     }
 
-    private func beatButton(_ symbol: String, delta: Int) -> some View {
+    private var tempoDial: some View {
+        ZStack {
+            ForEach(0..<31, id: \.self) { index in
+                Capsule().fill(palette.foreground.opacity(index % 5 == 0 ? 0.32 : 0.10))
+                    .frame(width: 1.5, height: index % 5 == 0 ? 6 : 3)
+                    .offset(y: -66)
+                    .rotationEffect(.degrees(-135 + Double(index) * 9))
+            }
+            Circle()
+                .fill(LinearGradient(colors: [palette.dialTop, palette.dialBottom],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 120, height: 120)
+                .overlay(Circle().strokeBorder(palette.border.opacity(0.14)))
+                .shadow(color: .black.opacity(0.5), radius: 4, y: 4)
+            Capsule().fill(palette.accent).frame(width: 4, height: 19)
+                .offset(y: -42)
+                .rotationEffect(.degrees(-135 + Double(model.bpm - 30) / 222 * 270))
+        }
+        .frame(width: 144, height: 144)
+        .contentShape(Circle())
+        .gesture(DragGesture(minimumDistance: 0).onChanged { value in
+            if dialStart == nil { dialStart = model.bpm }
+            model.bpm = Tempo.clamp((dialStart ?? model.bpm)
+                + Int((value.translation.width - value.translation.height) / 3))
+        }.onEnded { _ in dialStart = nil })
+        .accessibilityElement().accessibilityLabel("Tempo dial")
+        .accessibilityValue("\(model.bpm) beats per minute")
+        .accessibilityAdjustableAction { direction in
+            model.bpm += direction == .increment ? 1 : -1
+        }
+    }
+
+    private func beatButton(delta: Int) -> some View {
         let atLimit = delta < 0 ? model.beats == 0 : model.beats == 9
         return Button {
             let index = Metronome.beatOptions.firstIndex(of: model.beats) ?? 0
             let next = min(Metronome.beatOptions.count - 1, max(0, index + delta))
             model.beats = Metronome.beatOptions[next]
         } label: {
-            Image(systemName: symbol).font(.system(size: 14, weight: .medium))
-                .frame(width: 44, height: 38)
+            Image(systemName: "triangle.fill")
+                .font(.system(size: 15, weight: .regular))
+                .rotationEffect(.degrees(delta > 0 ? 0 : 180))
+                .frame(width: 44, height: 44)
         }
-        .buttonStyle(InstrumentButtonStyle(radius: 12))
+        .buttonStyle(InstrumentButtonStyle(radius: 22))
         .disabled(atLimit)
         .opacity(atLimit ? 0.4 : 1)
         .help(delta < 0 ? "Decrease beats per bar (0 = no accent)" : "Increase beats per bar")
