@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.5
+
+- Half-fill current and completed widget gap beats: upper half for the accented first beat, lower half otherwise.
+- Disable Shift + arrow shortcuts for meter and Gap in widget mode, including menu commands.
+- Restore those shortcuts automatically on return to the main window.
+
 ## 0.16.4
 
 - Use the theme’s Gap color for all widget beat circles during silent bars, preserving filled progress and outlined upcoming beats.

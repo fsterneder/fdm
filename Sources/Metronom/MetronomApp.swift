@@ -30,16 +30,16 @@ struct MetronomApp: App {
                 Button("Slower by 10 BPM") { model.bpm -= 10 }.keyboardShortcut(.leftArrow, modifiers: []).disabled(model.editingTempo)
                 Button("Increase Beats") { model.adjustBeats(by: 1) }
                     .keyboardShortcut(.upArrow, modifiers: [.shift])
-                    .disabled(model.editingTempo || model.beats == 9)
+                    .disabled(windows.isWidgetMode || model.editingTempo || model.beats == 9)
                 Button("Decrease Beats") { model.adjustBeats(by: -1) }
                     .keyboardShortcut(.downArrow, modifiers: [.shift])
-                    .disabled(model.editingTempo || model.beats == 1)
+                    .disabled(windows.isWidgetMode || model.editingTempo || model.beats == 1)
                 Button("Increase Gap") { model.adjustGap(by: 1) }
                     .keyboardShortcut(.rightArrow, modifiers: [.shift])
-                    .disabled(model.editingTempo || model.gap == GapCycle.random)
+                    .disabled(windows.isWidgetMode || model.editingTempo || model.gap == GapCycle.random)
                 Button("Decrease Gap") { model.adjustGap(by: -1) }
                     .keyboardShortcut(.leftArrow, modifiers: [.shift])
-                    .disabled(model.editingTempo || model.gap == 0)
+                    .disabled(windows.isWidgetMode || model.editingTempo || model.gap == 0)
             }
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Widget Mode") { windows.toggle() }
@@ -757,7 +757,8 @@ final class WindowModes: ObservableObject {
     // Retain the instrument so it can always be restored after being hidden.
     private var mainWindow: NSWindow?
     private enum Mode { case instrument, widget }
-    private var mode: Mode = .instrument
+    @Published private var mode: Mode = .instrument
+    var isWidgetMode: Bool { mode == .widget }
     private weak var model: Metronome?
     private var widget: TempoPanel?
     private var keyMonitor: Any?
@@ -796,6 +797,8 @@ final class WindowModes: ObservableObject {
                 return nil
             }
             if modifiers == [.shift] {
+                // Consume disabled shortcuts before menu or focus handling sees them.
+                if self.isWidgetMode && [123, 124, 125, 126].contains(event.keyCode) { return nil }
                 switch event.keyCode {
                 case 126: self.model?.adjustBeats(by: 1)
                 case 125: self.model?.adjustBeats(by: -1)

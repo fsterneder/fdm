@@ -246,17 +246,22 @@ private struct BeatLights: View {
                 ForEach(0..<count, id: \.self) { index in
                     let isCurrent = count == 1 ? pulse : playing && current == index
                     let isPlayed = count > 1 && playing && current >= 0 && index < current
-                    let isAccented = accent && index == 0 && !silent
+                    let hasAccent = accent && index == 0
+                    let isAccented = hasAccent && !silent
                     let color = silent ? palette.gap : (isAccented ? palette.action : (isCurrent ? palette.playingBeat : palette.neutral))
                     let highlight = LinearGradient(
                         colors: isAccented && isCurrent ? [palette.action, palette.playingBeat] : [color, color],
                         startPoint: .topLeading, endPoint: .bottomTrailing)
                     Circle()
-                        .fill(highlight).opacity(isCurrent || isPlayed ? 1 : 0)
+                        .fill(highlight)
+                        .mask(alignment: hasAccent ? .top : .bottom) {
+                            Rectangle().frame(height: silent ? diameter / 2 : diameter)
+                        }
+                        .opacity(isCurrent || isPlayed ? 1 : 0)
                         .overlay(Circle().strokeBorder(highlight, lineWidth: min(2.5, max(1.25, diameter * 0.04)))
                             .opacity(isCurrent || isPlayed ? 1 : outlineOpacity))
                         .frame(width: diameter, height: diameter)
-                        .accessibilityLabel("\(isAccented ? "Accented beat" : "Beat") \(index + 1) of \(count)")
+                        .accessibilityLabel("\(hasAccent ? "Accented beat" : "Beat") \(index + 1) of \(count)")
                         .accessibilityValue((silent ? "Silent gap, " : "") + (isCurrent ? "Current" : (isPlayed ? "Played" : "Upcoming")))
                 }
             }
