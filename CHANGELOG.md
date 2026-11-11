@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1
+
+- Match the approved LCD mockup's aspect ratio, digit proportions, label positions, and bottom-row symbols at both sizes.
+- Group theme colors into tempo, beats, and supporting symbols, with neutral labels.
+- Give every button the same finish except active Start/Stop.
+
 ## 0.8.0
 
 - Give IDE/Vim themes distinct colors for tempo, beats, labels, markers, pendulum, notes, and gap status.
