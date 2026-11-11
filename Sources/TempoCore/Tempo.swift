@@ -2,6 +2,10 @@ import Foundation
 
 public enum Tempo {
     public static func clamp(_ value: Int) -> Int { min(252, max(30, value)) }
+    /// Allow empty text during editing; only up to three ASCII digits otherwise.
+    public static func isValidDraft(_ text: String) -> Bool {
+        text.utf8.count <= 3 && text.utf8.allSatisfy { (48...57).contains($0) }
+    }
     public static func fromText(_ text: String) -> Int? {
         guard let value = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) else { return nil }
         return clamp(value)

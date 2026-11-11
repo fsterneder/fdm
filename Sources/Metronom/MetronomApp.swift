@@ -23,6 +23,7 @@ struct MetronomApp: App {
             CommandGroup(after: .appInfo) {
                 Button("Start / Stop") { model.toggle() }.keyboardShortcut(.space, modifiers: []).disabled(model.editingTempo)
                 Button("Tap Tempo") { model.tap() }.keyboardShortcut("t", modifiers: []).disabled(model.editingTempo)
+                Button("Mute / Unmute") { model.toggleMute() }.keyboardShortcut("m", modifiers: []).disabled(model.editingTempo)
                 Button("Faster") { model.bpm += 1 }.keyboardShortcut(.upArrow, modifiers: []).disabled(model.editingTempo)
                 Button("Slower") { model.bpm -= 1 }.keyboardShortcut(.downArrow, modifiers: []).disabled(model.editingTempo)
                 Button("Faster by 10 BPM") { model.bpm += 10 }.keyboardShortcut(.rightArrow, modifiers: []).disabled(model.editingTempo)
@@ -668,6 +669,7 @@ struct InlineTempoField: NSViewRepresentable {
         field.focusRingType = .none
         field.alignment = .right
         field.maximumNumberOfLines = 1
+        field.formatter = TempoInputFormatter()
         field.cell?.isScrollable = true
         field.font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .regular)
         field.textColor = NSColor(color)
@@ -719,6 +721,34 @@ struct InlineTempoField: NSViewRepresentable {
             }
             window?.makeFirstResponder(nil)
         }
+    }
+}
+
+// AppKit validates every proposed edit, including paste, before displaying it.
+// Empty text stays valid while editing so users can delete and replace a value.
+final class TempoInputFormatter: Formatter {
+    override func string(for obj: Any?) -> String? {
+        if let string = obj as? String { return string }
+        if let number = obj as? NSNumber { return number.stringValue }
+        return nil
+    }
+
+    override func getObjectValue(
+        _ obj: AutoreleasingUnsafeMutablePointer<AnyObject?>?,
+        for string: String,
+        errorDescription error: AutoreleasingUnsafeMutablePointer<NSString?>?
+    ) -> Bool {
+        guard Tempo.isValidDraft(string) else { return false }
+        obj?.pointee = string as NSString
+        return true
+    }
+
+    override func isPartialStringValid(
+        _ partialString: String,
+        newEditingString newString: AutoreleasingUnsafeMutablePointer<NSString?>?,
+        errorDescription error: AutoreleasingUnsafeMutablePointer<NSString?>?
+    ) -> Bool {
+        Tempo.isValidDraft(partialString)
     }
 }
 
@@ -875,7 +905,7 @@ struct InstrumentView: View {
                             .frame(width: 28, height: 28)
                     }
                     .buttonStyle(InstrumentButtonStyle(radius: 14))
-                    .help("Switch to floating mini metronome (Tab or |)")
+                    .help("Switch to floating mini metronome (Tab or \\)")
                     .accessibilityLabel("Enter widget mode")
                 }
             }
@@ -917,7 +947,7 @@ struct InstrumentView: View {
                 .frame(width: 48, height: 48)
         }
         .buttonStyle(InstrumentButtonStyle(radius: 24))
-        .help(model.volume == 0 ? "Unmute" : "Mute")
+        .help(model.volume == 0 ? "Unmute (M)" : "Mute (M)")
         .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
         .accessibilityValue(model.volume == 0 ? "Muted" : "Volume \(Int(model.volume * 100)) percent")
     }
@@ -1010,7 +1040,7 @@ struct InstrumentSettings: View {
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
-                .help(model.volume == 0 ? "Unmute" : "Mute")
+                .help(model.volume == 0 ? "Unmute (M)" : "Mute (M)")
                 .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
                 Slider(value: $model.volume, in: 0...1)
                     .tint(palette.sliderTint).controlSize(.small).accessibilityLabel("Volume")
@@ -1096,8 +1126,8 @@ final class WindowModes: ObservableObject {
                   event.window === self.mainWindow || event.window === self.widget
             else { return event }
             let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift])
-            // Match the typed pipe character, including layouts that use Option for it.
-            if event.characters == "|", modifiers.intersection([.command, .control]).isEmpty {
+            // Match the typed backslash character, including layouts that use Option for it.
+            if event.characters == "\\", modifiers.intersection([.command, .control]).isEmpty {
                 if !event.isARepeat { self.toggle() }
                 return nil
             }
@@ -1110,6 +1140,10 @@ final class WindowModes: ObservableObject {
                 return nil
             }
             guard modifiers.isEmpty else { return event }
+            if event.charactersIgnoringModifiers?.lowercased() == "m" {
+                if !event.isARepeat { self.model?.toggleMute() }
+                return nil
+            }
             switch event.keyCode {
             case 48: // Tab switches window mode before focus navigation consumes it.
                 if !event.isARepeat { self.toggle() }
@@ -1198,7 +1232,7 @@ struct TempoWidget: View {
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(InstrumentButtonStyle(radius: 8))
-                .help("Return to fdm-3 (Tab or |)")
+                .help("Return to fdm-3 (Tab or \\)")
                 .accessibilityLabel("Return to full fdm-3 window")
             }
         }

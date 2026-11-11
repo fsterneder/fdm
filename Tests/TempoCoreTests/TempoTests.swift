@@ -1,6 +1,14 @@
 import XCTest
 @testable import TempoCore
 final class TempoTests: XCTestCase {
+    func testTempoDraftAcceptsOnlyUpToThreeDigits() {
+        for text in ["", "3", "30", "120", "252", "999", "030"] {
+            XCTAssertTrue(Tempo.isValidDraft(text), text)
+        }
+        for text in ["abc", "120 BPM", "-5", "+90", "12.5", "1e2", "1234", " 90", "١٢٠", "１２３"] {
+            XCTAssertFalse(Tempo.isValidDraft(text), text)
+        }
+    }
     func testDirectTempoEntry() {
         XCTAssertEqual(Tempo.fromText(" 120 "), 120)
         XCTAssertEqual(Tempo.fromText("300"), 252)
