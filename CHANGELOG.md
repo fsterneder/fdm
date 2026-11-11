@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.1
+
+- Replace the blended active-accent gradient with a crisp split: accent above, current-beat color below.
+- Apply the split in both windows while preserving silent-gap half-fills and outlined upcoming beats.
+
 ## 0.18.0
 
 - Add Blue, Everforest (dark/medium), and Zenwritten (dark) using their original Vim/Neovim palettes.
