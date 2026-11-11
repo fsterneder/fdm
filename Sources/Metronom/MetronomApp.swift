@@ -785,11 +785,11 @@ struct InstrumentView: View {
                 }
                 Spacer()
                 Button(action: showWidget) {
-                    Label("Mini", systemImage: "pip")
-                        .font(.system(size: 11, weight: .medium))
-                        .padding(.horizontal, 9).frame(height: 28)
+                    Image(systemName: "arrow.down.right.and.arrow.up.left")
+                        .font(.system(size: 12, weight: .medium))
+                        .frame(width: 32, height: 32)
                 }
-                .buttonStyle(InstrumentButtonStyle(radius: 8))
+                .buttonStyle(InstrumentButtonStyle(radius: 16))
                 .help("Switch to floating mini metronome (⇧⌘M)")
                 .accessibilityLabel("Enter widget mode")
             }
