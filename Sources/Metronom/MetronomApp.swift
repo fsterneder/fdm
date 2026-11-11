@@ -44,6 +44,7 @@ final class AppLifecycle: NSObject, NSApplicationDelegate {
 
 @MainActor
 final class Metronome: ObservableObject {
+    static let beatOptions = [0] + Array(2...9)
     @Published var bpm: Int { didSet {
         let bounded = Tempo.clamp(bpm)
         if bpm != bounded { bpm = bounded; return }
@@ -79,7 +80,8 @@ final class Metronome: ObservableObject {
         let defaults = UserDefaults.standard
         defaults.register(defaults: ["bpm": 120, "beats": 4, "subdivisions": 1, "sound": 0, "volume": 0.65])
         bpm = Tempo.clamp(defaults.integer(forKey: "bpm"))
-        beats = min(9, max(0, defaults.integer(forKey: "beats")))
+        let savedBeats = min(9, max(0, defaults.integer(forKey: "beats")))
+        beats = savedBeats == 1 ? 0 : savedBeats
         subdivisions = min(4, max(1, defaults.integer(forKey: "subdivisions")))
         sound = min(ClickVoice.allCases.count - 1, max(0, defaults.integer(forKey: "sound")))
         volume = min(1, max(0, defaults.double(forKey: "volume")))
@@ -200,16 +202,16 @@ struct InstrumentPalette {
         case .dracula: return color(0x282A36)
         case .nord: return color(0x2E3440)
         case .gruvbox: return color(0x282828)
-        case .githubLight: return color(0xEAEEF2)
+        case .githubLight: return color(0xFFFFFF)
         }
     }
     var panel: Color {
         switch theme {
         case .charcoal: return Color(red: 0.105, green: 0.117, blue: 0.122)
-        case .dracula: return color(0x383349)
-        case .nord: return color(0x3B4A60)
-        case .gruvbox: return color(0x504231)
-        case .githubLight: return color(0xFFFFFF)
+        case .dracula: return color(0x44475A)
+        case .nord: return color(0x3B4252)
+        case .gruvbox: return color(0x3C3836)
+        case .githubLight: return color(0xF6F8FA)
         }
     }
     var accent: Color {
@@ -233,33 +235,49 @@ struct InstrumentPalette {
     var muted: Color {
         switch theme {
         case .charcoal: return Color(red: 0.52, green: 0.56, blue: 0.56)
-        case .dracula: return color(0xC1B7D8)
-        case .nord: return color(0xC1D1E4)
-        case .gruvbox: return color(0xD5C4A1)
+        case .dracula: return color(0x8BE9FD)
+        case .nord: return color(0xD8DEE9)
+        case .gruvbox: return color(0xBDAE93)
         case .githubLight: return color(0x57606A)
         }
     }
     var controlTop: Color {
         switch theme {
         case .charcoal: return Color(white: 0.23)
-        case .dracula: return color(0x62517D)
-        case .nord: return color(0x4C6A80)
-        case .gruvbox: return color(0x70562C)
+        case .dracula: return color(0x44475A)
+        case .nord: return color(0x434C5E)
+        case .gruvbox: return color(0x3C3836)
         case .githubLight: return color(0xFFFFFF)
         }
     }
     var controlBottom: Color {
         switch theme {
         case .charcoal: return Color(white: 0.16)
-        case .dracula: return color(0x443A5B)
-        case .nord: return color(0x354B61)
-        case .gruvbox: return color(0x4A3B2C)
-        case .githubLight: return color(0xDDEBFC)
+        case .dracula: return color(0x44475A)
+        case .nord: return color(0x434C5E)
+        case .gruvbox: return color(0x3C3836)
+        case .githubLight: return color(0xFFFFFF)
         }
     }
-    var recess: Color { theme.isLight ? color(0xF6F8FA) : ink.opacity(theme == .charcoal ? 0.65 : 0.8) }
+    var recess: Color { theme == .charcoal ? ink.opacity(0.65) : panel }
     var border: Color { theme.isLight ? .black : .white }
-    var fieldBorder: Color { theme == .charcoal ? border.opacity(0.06) : accent.opacity(0.32) }
+    var fieldBorder: Color {
+        switch theme {
+        case .charcoal: return border.opacity(0.06)
+        case .dracula: return color(0x6272A4)
+        case .nord: return color(0x4C566A)
+        case .gruvbox: return color(0x665C54)
+        case .githubLight: return color(0xD0D7DE)
+        }
+    }
+    var bodyColors: [Color] { theme == .charcoal ? [panel, ink] : [ink, ink] }
+    var lcdGlass: [Color] {
+        theme == .charcoal ? [
+            Color(red: 0.64, green: 0.69, blue: 0.60),
+            Color(red: 0.71, green: 0.75, blue: 0.66),
+            Color(red: 0.63, green: 0.68, blue: 0.59)
+        ] : [ink, ink]
+    }
     var sliderTint: Color { theme == .charcoal ? Finish.lcd : accent }
     var dialTop: Color { theme == .charcoal ? Color(white: 0.29) : controlTop }
     var dialBottom: Color { theme == .charcoal ? Color(white: 0.15) : controlBottom }
@@ -301,7 +319,7 @@ struct InstrumentButtonStyle: ButtonStyle {
             )
             .overlay(RoundedRectangle(cornerRadius: radius)
                 .strokeBorder(theme == .charcoal ? palette.border.opacity(configuration.isPressed ? 0.05 : 0.10) : palette.accent.opacity(configuration.isPressed ? 0.15 : 0.4), lineWidth: 1))
-            .shadow(color: .black.opacity(configuration.isPressed ? 0 : 0.3), radius: 2, y: 2)
+            .shadow(color: .black.opacity(configuration.isPressed || theme != .charcoal ? 0 : 0.3), radius: 2, y: 2)
             .brightness(configuration.isPressed ? -0.08 : 0)
             .offset(y: configuration.isPressed ? 1 : 0)
     }
@@ -353,7 +371,10 @@ private enum LCDSegments {
 struct HardwareLCD: View {
     @ObservedObject var model: Metronome
     var compact = false
-    private let ink = Color(red: 0.08, green: 0.12, blue: 0.095)
+    private var palette: InstrumentPalette { model.theme.palette }
+    private var ink: Color {
+        model.theme == .charcoal ? Color(red: 0.08, green: 0.12, blue: 0.095) : palette.accent
+    }
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !model.playing)) { timeline in
             Canvas { context, size in
@@ -361,7 +382,7 @@ struct HardwareLCD: View {
                 context.scaleBy(x: size.width / logical.width, y: size.height / logical.height)
                 func label(_ text: String, x: CGFloat, y: CGFloat, size: CGFloat = 10) {
                     context.draw(Text(text).font(.system(size: size, weight: .medium))
-                        .foregroundColor(ink), at: CGPoint(x: x, y: y), anchor: .topLeading)
+                        .foregroundColor(model.theme == .charcoal ? ink : palette.foreground), at: CGPoint(x: x, y: y), anchor: .topLeading)
                 }
                 func number(_ value: Int, places: Int, x: CGFloat, y: CGFloat, height: CGFloat) {
                     let chars = Array(String(value))
@@ -430,16 +451,12 @@ struct HardwareLCD: View {
             }
             }
         .background(
-            LinearGradient(colors: [
-                Color(red: 0.64, green: 0.69, blue: 0.60),
-                Color(red: 0.71, green: 0.75, blue: 0.66),
-                Color(red: 0.63, green: 0.68, blue: 0.59)
-            ], startPoint: .topLeading, endPoint: .bottomTrailing),
+            LinearGradient(colors: palette.lcdGlass, startPoint: .topLeading, endPoint: .bottomTrailing),
             in: RoundedRectangle(cornerRadius: compact ? 5 : 9)
         )
         .clipShape(RoundedRectangle(cornerRadius: compact ? 5 : 9))
         .overlay(RoundedRectangle(cornerRadius: compact ? 5 : 9)
-            .strokeBorder(.black.opacity(0.65), lineWidth: compact ? 1 : 2))
+            .strokeBorder(model.theme == .charcoal ? .black.opacity(0.65) : palette.fieldBorder, lineWidth: compact ? 1 : 2))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("LCD")
         .accessibilityValue("\(model.bpm) beats per minute, \(model.beats == 0 ? "no accent" : "\(model.beats) beats per bar"), voice \(model.sound + 1), \(model.playing ? "playing" : "stopped")")
@@ -628,7 +645,7 @@ struct InstrumentView: View {
 
             VStack(spacing: 10) {
                 HStack(spacing: 8) {
-                    SettingMenu(title: "BEATS", value: $model.beats, values: Array(0...9))
+                    SettingMenu(title: "BEATS", value: $model.beats, values: Metronome.beatOptions)
                     SettingMenu(title: "DIVISION", value: $model.subdivisions, values: Array(1...4))
                 }
                 HStack(spacing: 8) {
@@ -646,7 +663,7 @@ struct InstrumentView: View {
                 .font(.system(size: 9, design: .monospaced)).foregroundColor(palette.muted.opacity(0.75))
         }
         .padding(18).frame(width: 320)
-        .background(LinearGradient(colors: [palette.panel, palette.ink],
+        .background(LinearGradient(colors: palette.bodyColors,
                                   startPoint: .topLeading, endPoint: .bottomTrailing))
         .preferredColorScheme(model.theme.colorScheme)
         .alert("Audio unavailable", isPresented: Binding(
@@ -679,7 +696,9 @@ struct InstrumentView: View {
     private func beatButton(_ symbol: String, delta: Int) -> some View {
         let atLimit = delta < 0 ? model.beats == 0 : model.beats == 9
         return Button {
-            model.beats = min(9, max(0, model.beats + delta))
+            let index = Metronome.beatOptions.firstIndex(of: model.beats) ?? 0
+            let next = min(Metronome.beatOptions.count - 1, max(0, index + delta))
+            model.beats = Metronome.beatOptions[next]
         } label: {
             Image(systemName: symbol).font(.system(size: 14, weight: .medium))
                 .frame(width: 44, height: 38)
@@ -825,7 +844,7 @@ struct TempoWidget: View {
             }
         }
         .padding(.horizontal, 10).frame(width: 196, height: 82)
-        .background(LinearGradient(colors: [palette.panel, palette.ink],
+        .background(LinearGradient(colors: palette.bodyColors,
                                   startPoint: .topLeading, endPoint: .bottomTrailing),
                     in: RoundedRectangle(cornerRadius: 13))
         .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(palette.border.opacity(0.10)))
