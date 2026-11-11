@@ -10,7 +10,7 @@ struct MetronomApp: App {
     @StateObject private var model = Metronome()
     @StateObject private var windows = WindowModes()
     var body: some Scene {
-        WindowGroup("Metronom") {
+        WindowGroup("fdm-3") {
             InstrumentView(model: model, showWidget: { windows.showWidget() })
                 .background(WindowBridge(windows: windows, model: model))
         }
@@ -152,9 +152,9 @@ struct InstrumentView: View {
     @State private var dialStart: Int?
     private let lcd = Color(red: 0.70, green: 0.77, blue: 0.61)
     var body: some View {
-        VStack(spacing: 22) {
+        VStack(spacing: 12) {
             HStack {
-                Text("METRONOM").font(.system(size: 17, weight: .black, design: .rounded)).tracking(4)
+                Text("fdm-3").font(.system(size: 17, weight: .black, design: .rounded)).tracking(2)
                 Spacer()
                 Button(action: showWidget) {
                     Image(systemName: "pip.enter")
@@ -165,7 +165,7 @@ struct InstrumentView: View {
             }
             VStack(spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(String(model.bpm)).font(.system(size: 86, weight: .medium, design: .monospaced)).monospacedDigit()
+                    Text(String(model.bpm)).font(.system(size: 68, weight: .medium, design: .monospaced)).monospacedDigit()
                     Text("BPM").font(.system(size: 14, weight: .bold, design: .monospaced))
                 }
                 HStack(spacing: 10) {
@@ -177,17 +177,17 @@ struct InstrumentView: View {
                 }.frame(height: 12)
             }
             .foregroundColor(.black.opacity(0.85))
-            .frame(maxWidth: .infinity).padding(.vertical, 15)
+            .frame(maxWidth: .infinity).padding(.vertical, 8)
             .background(lcd.gradient, in: RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(.black, lineWidth: 4))
-            HStack(spacing: 28) {
+            HStack(spacing: 20) {
                 Button { model.bpm -= 1 } label: { Image(systemName: "minus").frame(width: 28, height: 34) }
                     .accessibilityLabel("Decrease tempo")
                 ZStack {
-                    Circle().fill(.black.opacity(0.4)).frame(width: 126, height: 126)
+                    Circle().fill(.black.opacity(0.4)).frame(width: 96, height: 96)
                     Circle().fill(LinearGradient(colors: [Color(white: 0.32), Color(white: 0.10)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 112, height: 112).overlay(Circle().stroke(Color(white: 0.4), lineWidth: 1))
-                    Capsule().fill(.orange).frame(width: 4, height: 22).offset(y: -37)
+                        .frame(width: 84, height: 84).overlay(Circle().stroke(Color(white: 0.4), lineWidth: 1))
+                    Capsule().fill(.orange).frame(width: 4, height: 17).offset(y: -27)
                         .rotationEffect(.degrees(-135 + Double(model.bpm - 30) / 222 * 270))
                 }
                 .contentShape(Circle())
@@ -224,12 +224,9 @@ struct InstrumentView: View {
             }
             Text("SPACE  start / stop     T  tap     ↑ ↓  tempo")
                 .font(.system(size: 10, design: .monospaced)).foregroundColor(.gray)
-            VStack(spacing: 5) {
-                ForEach(0..<4, id: \.self) { _ in Capsule().fill(.black.opacity(0.35)).frame(height: 3) }
-            }.padding(.horizontal, 45).padding(.top, 3)
         }
         .buttonStyle(.bordered)
-        .padding(28).frame(width: 390)
+        .padding(18).frame(width: 320)
         .background(LinearGradient(colors: [Color(white: 0.19), Color(white: 0.09)], startPoint: .topLeading, endPoint: .bottomTrailing))
         .preferredColorScheme(.dark)
         .alert("Audio unavailable", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
@@ -282,10 +279,10 @@ final class WindowModes: ObservableObject {
         guard let model, let mainWindow else { return }
         if widget == nil {
             let panel = TempoPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 160, height: 88),
+                contentRect: NSRect(x: 0, y: 0, width: 168, height: 72),
                 styleMask: [.borderless], backing: .buffered, defer: false
             )
-            panel.title = "Metronom Tempo"
+            panel.title = "fdm-3 Tempo"
             panel.level = .floating
             panel.hidesOnDeactivate = false
             panel.isMovableByWindowBackground = true
@@ -322,26 +319,38 @@ struct TempoWidget: View {
     @ObservedObject var model: Metronome
     var showInstrument: () -> Void
     var body: some View {
-        Text(String(model.bpm))
-            .font(.system(size: 52, weight: .medium, design: .monospaced))
-            .monospacedDigit()
-            .foregroundColor(Color(red: 0.70, green: 0.77, blue: 0.61))
-            .frame(width: 160, height: 88)
+        HStack(spacing: 10) {
+            Text(String(model.bpm))
+                .font(.system(size: 42, weight: .medium, design: .monospaced))
+                .monospacedDigit()
+                .foregroundColor(Color(red: 0.70, green: 0.77, blue: 0.61))
+                .accessibilityLabel("Tempo")
+                .accessibilityValue("\(model.bpm) beats per minute")
+                .accessibilityAdjustableAction { direction in
+                    model.bpm += direction == .increment ? 1 : -1
+                }
+            Button(action: showInstrument) {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(width: 28, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.gray)
+            .help("Return to fdm-3 (⇧⌘M)")
+            .accessibilityLabel("Return to full fdm-3 window")
+        }
+            .frame(width: 168, height: 72)
             .background(Color(white: 0.10))
             .contentShape(Rectangle())
             .contextMenu {
                 Button(model.playing ? "Stop" : "Start") { model.toggle() }
                 Button("Tap Tempo") { model.tap() }
                 Divider()
-                Button("Show Full Metronome") { showInstrument() }
+                Button("Show Full fdm-3") { showInstrument() }
                     .keyboardShortcut("m", modifiers: [.command, .shift])
             }
-            .help("Drag to move. Right-click for controls or to return to the full metronome. Space starts or stops when focused.")
-            .accessibilityLabel("Tempo")
-            .accessibilityValue("\(model.bpm) beats per minute")
-            .accessibilityAdjustableAction { direction in
-                model.bpm += direction == .increment ? 1 : -1
-            }
+            .help("Drag to move. Click the expand button to return to fdm-3. Right-click for controls. Space starts or stops when focused.")
             .preferredColorScheme(.dark)
     }
 }
