@@ -2,7 +2,7 @@
 
 A compact macOS metronome with round beat lights, tap tempo, subdivisions, gap practice, five sounds, and IDE/Vim themes.
 
-<img src="docs/images/fdm-3.svg" alt="Dracula interface preview" width="304">
+<img src="docs/images/fdm-3.svg" alt="Dracula interface preview" width="352">
 
 ## Build and run
 
@@ -16,23 +16,19 @@ open dist/fdm-3.app
 
 ## Controls
 
-- **BPM:** drag up/down to adjust (30–252). Double-click for optional numeric entry.
-- **Subdivision:** drag up/down through quarter notes, eighths, triplets, and sixteenths.
-- **Settings:** Beats (1–9), Accent (Yes/No), Gap, Gap Length (1–8 beats), Sound, Theme, and volume.
+- **BPM / subdivision:** drag up/down. Double-click BPM for optional numeric entry.
+- **Bottom row:** Tap, Settings, Mute, and Start/Stop. The upper-right arrows open the widget.
+- **Settings:** Beats (1–9), Accent, Gap, Gap Length (1–8 bars), Sound, Theme, and volume.
 - **Space:** Start/Stop. **T:** tap. **M:** mute.
 - **↑/↓:** tempo ±1. **←/→:** tempo ±10. **Shift + ↑/↓:** beats.
 - **Tab or &#92;:** switch to the floating widget.
 
-Completed beats stay filled; the current beat uses the theme's highlight. A one-beat pattern flashes each beat. Accent controls first-beat emphasis independently of the beat count.
-
-The main window shows subdivision or a silent-beat countdown; the single-row widget shows read-only BPM and beat progress. Speaker and Start/Stop use flat styling. Closing the main window quits the app.
+Completed beats stay filled. With Accent enabled, the first indicator uses the Play accent; other active beats use the current-beat color. The widget shows read-only BPM and beat progress.
 
 ## Gap practice
 
-Play 1, 2, or 4 bars' worth of audible beats, then 1–8 silent beats. **Random** chooses a fresh audible run length each cycle with equal probability. Beat counting continues throughout.
+Play 1, 2, or 4 audible bars, then 1–8 silent bars. **Random** chooses a fresh audible run length each cycle. The subdivision slot shows silent bars remaining, such as **2/2 → 1/2**.
 
-During silence, the subdivision slot shows beats remaining out of the gap length, such as **2/2 → 1/2**, then returns to the subdivision.
-
-The old No Accent setting migrates to four beats with Accent off. Existing gap lengths default to one bar, capped at eight beats.
+Existing beat-based gap lengths round up to whole bars. Accent is independent of meter. Closing the main window quits the app.
 
 The Dock icon follows the selected theme; Finder uses Default. Homebrew installation is not published yet. See [CHANGELOG.md](CHANGELOG.md).

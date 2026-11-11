@@ -3,8 +3,8 @@ import AppKit
 import TempoCore
 
 enum DisplayGeometry {
-    static let width: CGFloat = 332
-    static let mainHeight: CGFloat = 168
+    static let width: CGFloat = 392
+    static let mainHeight: CGFloat = 184
     static let widgetWidth: CGFloat = 244
     static let widgetHeight: CGFloat = 52
 }
@@ -25,39 +25,39 @@ struct ModernReadout: View {
         GeometryReader { geometry in
             let scale = min(geometry.size.width / DisplayGeometry.width,
                             geometry.size.height / DisplayGeometry.mainHeight)
-            VStack(spacing: 16 * scale) {
+            VStack(spacing: 28 * scale) {
                 HStack(spacing: 0) {
                     VStack(spacing: 2 * scale) {
-                        TempoValue(model: model, fontSize: 56 * scale, width: 166 * scale, height: 68 * scale)
+                        TempoValue(model: model, fontSize: 68 * scale, width: 196 * scale, height: 84 * scale)
                         caption("BPM", scale: scale)
                     }
-                    .frame(width: 166 * scale)
+                    .frame(width: 196 * scale)
                     VStack(spacing: 2 * scale) {
-                        Text(model.inSilentBar ? "\(model.gapBeatsRemaining)/\(model.gapLength)" : subdivisionText)
-                            .font(.system(size: (model.inSilentBar ? 38 : 42) * scale, weight: .regular))
+                        Text(model.inSilentBar ? "\(model.gapBarsRemaining)/\(model.gapBars)" : subdivisionText)
+                            .font(.system(size: (model.inSilentBar ? 48 : 54) * scale, weight: .regular))
                             .monospacedDigit()
                             .foregroundColor(model.inSilentBar ? palette.neutral : palette.beat)
                             .minimumScaleFactor(0.6).lineLimit(1)
-                            .frame(width: 158 * scale, height: 68 * scale)
-                        caption(model.inSilentBar ? "SILENT BEATS" : "SUBDIVISION", scale: scale)
+                            .frame(width: 188 * scale, height: 84 * scale)
+                        caption(model.inSilentBar ? "SILENT BARS" : "SUBDIVISION", scale: scale)
                     }
-                    .frame(width: 166 * scale)
+                    .frame(width: 196 * scale)
                     .overlay {
                         ValueDragArea(value: model.subdivisions, bounds: 1...4, pointsPerStep: 12,
                             onSet: { value in
                                 if model.subdivisions != value { model.subdivisions = value }
                             }, onDoubleClick: nil, onDragState: { model.editingTempo = $0 })
-                            .frame(width: 166 * scale, height: 84 * scale)
+                            .frame(width: 196 * scale, height: 100 * scale)
                             .accessibilityHidden(true)
                     }
                     .help("Drag up/down to change subdivision.")
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(model.inSilentBar ? "Silent beats remaining" : "Subdivision")
-                    .accessibilityValue(model.inSilentBar ? "\(model.gapBeatsRemaining) of \(model.gapLength) beats remaining" : "\(model.subdivisions) clicks per beat")
+                    .accessibilityLabel(model.inSilentBar ? "Silent bars remaining" : "Subdivision")
+                    .accessibilityValue(model.inSilentBar ? "\(model.gapBarsRemaining) of \(model.gapBars) bars remaining" : "\(model.subdivisions) clicks per beat")
                 }
-                .frame(height: 84 * scale)
-                BeatLights(model: model, width: DisplayGeometry.width * scale, maxDiameter: 68 * scale, spacing: 20 * scale)
-                    .frame(height: 68 * scale)
+                .frame(height: 100 * scale)
+                BeatLights(model: model, width: DisplayGeometry.width * scale, maxDiameter: 56 * scale, spacing: 24 * scale)
+                    .frame(height: 56 * scale)
 
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .center)
@@ -131,6 +131,7 @@ private struct BeatLights: View {
     var body: some View {
         let count = max(1, model.beats)
         let playing = model.playing
+        let accent = model.accent
         let current = model.currentBeat
         let beatTime = model.beatTime
         let bpm = model.bpm
@@ -144,12 +145,13 @@ private struct BeatLights: View {
                 ForEach(0..<count, id: \.self) { index in
                     let isCurrent = count == 1 ? pulse : playing && current == index
                     let isPlayed = count > 1 && playing && current >= 0 && index < current
-                    let color = isCurrent ? palette.playingBeat : palette.neutral
+                    let isAccented = accent && index == 0
+                    let color = isAccented ? palette.action : (isCurrent ? palette.playingBeat : palette.neutral)
                     Circle()
                         .fill(isCurrent || isPlayed ? color : Color.clear)
                         .overlay(Circle().strokeBorder(color, lineWidth: min(2.5, max(1.25, diameter * 0.04))))
                         .frame(width: diameter, height: diameter)
-                        .accessibilityLabel("Beat \(index + 1) of \(count)")
+                        .accessibilityLabel("\(isAccented ? "Accented beat" : "Beat") \(index + 1) of \(count)")
                         .accessibilityValue(isCurrent ? "Current" : (isPlayed ? "Played" : "Upcoming"))
                 }
             }

@@ -62,8 +62,8 @@ final class Metronome: ObservableObject {
     @Published var accent: Bool {
         didSet { UserDefaults.standard.set(accent, forKey: "accent"); restart() }
     }
-    @Published var gapLength: Int {
-        didSet { UserDefaults.standard.set(gapLength, forKey: "gapLength"); restart() }
+    @Published var gapBars: Int {
+        didSet { UserDefaults.standard.set(gapBars, forKey: "gapBars"); restart() }
     }
     @Published var subdivisions: Int { didSet { UserDefaults.standard.set(subdivisions, forKey: "subdivisions"); restart() } }
     @Published var sound: Int { didSet { UserDefaults.standard.set(sound, forKey: "sound"); restart() } }
@@ -88,8 +88,8 @@ final class Metronome: ObservableObject {
     } }
     @Published private(set) var playing = false
     @Published private(set) var currentBeat = -1
-    @Published private(set) var gapBeatsRemaining = 0
-    var inSilentBar: Bool { gapBeatsRemaining > 0 }
+    @Published private(set) var gapBarsRemaining = 0
+    var inSilentBar: Bool { gapBarsRemaining > 0 }
     @Published private(set) var beatTime: TimeInterval = 0
     @Published private(set) var beatNumber = 0
     @Published var error: String?
@@ -114,8 +114,10 @@ final class Metronome: ObservableObject {
                                   savedAccent: defaults.object(forKey: "accent") as? Bool)
         beats = pattern.beats
         accent = pattern.accent
-        let savedLength = defaults.object(forKey: "gapLength") as? Int
-        gapLength = min(8, max(1, savedLength ?? pattern.beats))
+        gapBars = GapCycle.restoredLength(
+            savedBars: defaults.object(forKey: "gapBars") as? Int,
+            legacyBeats: defaults.object(forKey: "gapLength") as? Int,
+            beatsPerBar: pattern.beats)
         subdivisions = min(4, max(1, defaults.integer(forKey: "subdivisions")))
         sound = min(ClickVoice.allCases.count - 1, max(0, defaults.integer(forKey: "sound")))
         let savedVolume = min(1, max(0, defaults.double(forKey: "volume")))
@@ -131,7 +133,7 @@ final class Metronome: ObservableObject {
         // Persist the migration so a new one-beat meter is never mistaken for legacy No Accent.
         defaults.set(pattern.beats, forKey: "beats")
         defaults.set(pattern.accent, forKey: "accent")
-        defaults.set(gapLength, forKey: "gapLength")
+        defaults.set(gapBars, forKey: "gapBars")
     }
     func adjustBeats(by delta: Int) {
         let index = Self.beatOptions.firstIndex(of: beats) ?? 0
@@ -158,7 +160,7 @@ final class Metronome: ObservableObject {
                 return silence
             }
             playing = true
-            gapBeatsRemaining = 0
+            gapBarsRemaining = 0
             gapSequence = GapSequence()
             nextFrame = 0; tick = 0; currentBeat = -1; beatTime = 0; beatNumber = 0
             activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .idleSystemSleepDisabled], reason: "Playing metronome")
@@ -176,7 +178,7 @@ final class Metronome: ObservableObject {
     }
     func stop() {
         generation = UUID(); timer?.invalidate(); timer = nil
-        player.stop(); playing = false; currentBeat = -1; beatTime = 0; gapBeatsRemaining = 0
+        player.stop(); playing = false; currentBeat = -1; beatTime = 0; gapBarsRemaining = 0
         if let activity { ProcessInfo.processInfo.endActivity(activity); self.activity = nil }
     }
     private func refill() {
@@ -192,8 +194,8 @@ final class Metronome: ObservableObject {
             let mainBeat = tick % subdivisions == 0
             let beat = (tick / subdivisions) % beats
             let kind = BeatPattern.soundKind(beat: beat, isMainBeat: mainBeat, accent: accent)
-            let silent = gapSequence.isSilent(tick: tick, beats: beats, subdivisions: subdivisions, audibleBars: gap, silentBeats: gapLength)
-            let remaining = gapSequence.silentBeatsRemaining
+            let silent = gapSequence.isSilent(tick: tick, beats: beats, subdivisions: subdivisions, audibleBars: gap, silentBars: gapBars)
+            let remaining = gapSequence.silentBarsRemaining
             let buffer = silent ? silentBuffers[kind] : buffers[kind]
             let frame = AVAudioFramePosition(nextFrame.rounded())
             player.scheduleBuffer(buffer, at: AVAudioTime(sampleTime: frame, atRate: format.sampleRate), options: [], completionCallbackType: .dataPlayedBack) { [weak self] _ in
@@ -202,7 +204,7 @@ final class Metronome: ObservableObject {
                         guard let self, self.playing, self.generation == run else { return }
                         self.beatTime = Date.timeIntervalSinceReferenceDate
                         self.beatNumber &+= 1
-                        self.gapBeatsRemaining = remaining
+                        self.gapBarsRemaining = remaining
                         self.currentBeat = beat
                     }
                 }
@@ -583,74 +585,70 @@ struct InstrumentView: View {
     @State private var showingSettings = false
     private var palette: InstrumentPalette { model.theme.palette }
     var body: some View {
-        VStack(spacing: 18) {
-            header
+        VStack(spacing: 28) {
             ModernReadout(model: model).frame(height: DisplayGeometry.mainHeight)
-            HStack(spacing: 8) {
-                Button { model.toggleMute() } label: {
-                    Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
-                        .font(.system(size: 16)).frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain).foregroundColor(palette.neutral)
-                .help(model.volume == 0 ? "Unmute (M)" : "Mute (M)")
-                .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
-                Button { model.toggle() } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: model.playing ? "stop.fill" : "play.fill")
-                        Text(model.playing ? "Stop" : "Start")
-                    }
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(palette.action)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help("Start / Stop (Space)")
-                .accessibilityLabel(model.playing ? "Stop metronome" : "Start metronome")
-            }
+            controls
         }
-        .padding(.horizontal, 24).padding(.vertical, 16).frame(width: 380)
+        .padding(.horizontal, 24).padding(.top, 8).padding(.bottom, 20)
+        .frame(width: 440)
         .background(palette.background)
         .preferredColorScheme(model.theme.colorScheme)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: showWidget) {
+                    Image(systemName: "arrow.down.right.and.arrow.up.left")
+                        .font(.system(size: 14)).frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain).foregroundColor(palette.neutral)
+                .help("Widget mode (Tab or \\)").accessibilityLabel("Enter widget mode")
+            }
+        }
+        .toolbarBackground(palette.background, for: .windowToolbar)
+        .toolbarBackground(.visible, for: .windowToolbar)
         .alert("Audio unavailable", isPresented: Binding(
             get: { model.error != nil }, set: { if !$0 { model.error = nil } }
         )) {
             Button("OK") { model.error = nil }
         } message: { Text(model.error ?? "") }
     }
-
-    private var header: some View {
-        HStack(spacing: 12) {
-            Text("fdm-3")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .tracking(-0.5).foregroundColor(palette.neutral)
-            Spacer(minLength: 8)
+    private var controls: some View {
+        HStack(spacing: 0) {
             Button { model.tap() } label: {
-                Text("TAP").font(.system(size: 11, weight: .semibold)).frame(width: 32, height: 28)
+                Text("TAP").font(.system(size: 11, weight: .semibold))
+                    .frame(width: DisplayGeometry.width / 4, height: 32).contentShape(Rectangle())
             }
             .buttonStyle(.plain).foregroundColor(palette.neutral)
             .help("Tap tempo (T)").accessibilityLabel("Tap tempo")
             Button { showingSettings.toggle() } label: {
-                Image(systemName: "gearshape").font(.system(size: 17)).frame(width: 28, height: 28)
+                Image(systemName: "gearshape").font(.system(size: 17))
+                    .frame(width: DisplayGeometry.width / 4, height: 32).contentShape(Rectangle())
             }
             .buttonStyle(.plain).foregroundColor(palette.neutral)
             .help("Settings").accessibilityLabel("Settings")
-            .popover(isPresented: $showingSettings, arrowEdge: .trailing) {
+            .popover(isPresented: $showingSettings, arrowEdge: .top) {
                 InstrumentSettings(model: model)
                     .environment(\.instrumentTheme, model.theme)
                     .preferredColorScheme(model.theme.colorScheme)
             }
-            Button(action: showWidget) {
-                Image(systemName: "arrow.down.right.and.arrow.up.left")
-                    .font(.system(size: 15)).frame(width: 28, height: 28)
+            Button { model.toggleMute() } label: {
+                Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
+                    .font(.system(size: 17)).frame(width: DisplayGeometry.width / 4, height: 32)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain).foregroundColor(palette.neutral)
-            .help("Widget mode (Tab or \\)").accessibilityLabel("Enter widget mode")
+            .help(model.volume == 0 ? "Unmute (M)" : "Mute (M)")
+            .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
+            Button { model.toggle() } label: {
+                Image(systemName: model.playing ? "stop.fill" : "play.fill")
+                    .font(.system(size: 18, weight: .medium))
+                    .frame(width: DisplayGeometry.width / 4, height: 32).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain).foregroundColor(palette.action)
+            .help("Start / Stop (Space)")
+            .accessibilityLabel(model.playing ? "Stop metronome" : "Start metronome")
         }
-        .frame(height: 28)
+        .frame(height: 32)
     }
-
 }
 
 @MainActor
@@ -668,7 +666,7 @@ struct InstrumentSettings: View {
                 }
                 HStack(spacing: 8) {
                     accentSelector
-                    gapLengthSelector
+                    gapBarsSelector
                 }
                 HStack(spacing: 8) {
                     soundSelector
@@ -720,16 +718,16 @@ struct InstrumentSettings: View {
         }
     }
 
-    private var gapLengthSelector: some View {
+    private var gapBarsSelector: some View {
         ChoiceDropdown(
-            title: "GAP LENGTH", selectedID: String(model.gapLength),
-            selectedLabel: "\(model.gapLength) \(model.gapLength == 1 ? "beat" : "beats")",
+            title: "GAP LENGTH", selectedID: String(model.gapBars),
+            selectedLabel: "\(model.gapBars) \(model.gapBars == 1 ? "bar" : "bars")",
             options: GapCycle.lengthOptions.map {
-                DropdownChoice(id: String($0), label: "\($0) \($0 == 1 ? "beat" : "beats")")
+                DropdownChoice(id: String($0), label: "\($0) \($0 == 1 ? "bar" : "bars")")
             }
         ) { id in
-            if let length = Int(id), GapCycle.lengthOptions.contains(length), model.gapLength != length {
-                model.gapLength = length
+            if let length = Int(id), GapCycle.lengthOptions.contains(length), model.gapBars != length {
+                model.gapBars = length
             }
         }
     }
@@ -785,6 +783,9 @@ final class WindowModes: ObservableObject {
     func attach(window: NSWindow, model: Metronome) {
         guard mainWindow !== window else { return }
         mainWindow = window
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.toolbarStyle = .unifiedCompact
         window.isReleasedWhenClosed = false
         self.model = model
         // Apply the saved theme on launch; later theme changes refresh the Dock immediately.

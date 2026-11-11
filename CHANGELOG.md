@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0
+
+- Adopt the approved logo-free layout with larger metric values, spaced beat lights, and four flat bottom controls.
+- Keep the original inward widget arrows in the upper-right native toolbar.
+- Color the first beat with the Play accent when Accent is enabled, in both main and widget views.
+- Measure Gap Length and its countdown in whole bars (1–8); preserve subdivision-aligned transitions.
+- Migrate saved beat-length gaps to whole bars, rounded up, without reinterpreting them on later launches.
+
 ## 0.11.0
 
 - Make the widget BPM read-only; BPM dragging remains available in the main window.
