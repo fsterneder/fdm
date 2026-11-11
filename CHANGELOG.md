@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.9
+
+- Make the widget speaker always visible and clickable to mute or restore the previous volume.
+- Match the speaker and expand symbols’ rendered height and center them in identical button frames.
+
 ## 0.16.8
 
 - Balance the main control column’s icon sizes and use a consistent medium stroke weight, including a larger widget-mode symbol.

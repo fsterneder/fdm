@@ -889,20 +889,16 @@ struct TempoWidget: View {
     var body: some View {
         HStack(spacing: 10) {
             CompactReadout(model: model)
-            HStack(spacing: 6) {
-                Image(systemName: "speaker.slash")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(palette.neutral)
-                    .frame(width: 18, height: 28)
-                    .opacity(model.volume == 0 ? 0.75 : 0)
-                    .accessibilityLabel("Muted")
-                    .accessibilityHidden(model.volume != 0)
-                    .help(model.volume == 0 ? "Muted (M to unmute)" : "")
+            HStack(spacing: 2) {
+                Button { model.toggleMute() } label: {
+                    controlSymbol(model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
+                }
+                .buttonStyle(.plain).foregroundColor(palette.neutral.opacity(0.8))
+                .help(model.volume == 0 ? "Unmute (M)" : "Mute (M)")
+                .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
+                .accessibilityValue(model.volume == 0 ? "Muted" : "Sound on")
                 Button(action: showInstrument) {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 12, weight: .medium))
-                        .frame(width: 22, height: 28)
-                        .contentShape(Rectangle())
+                    controlSymbol("arrow.up.left.and.arrow.down.right")
                 }
                 .buttonStyle(.plain).foregroundColor(palette.neutral.opacity(0.8))
                 .help("Return to fdm (Tab or \\)")
@@ -932,6 +928,14 @@ struct TempoWidget: View {
         .environment(\.instrumentTheme, model.theme)
         .help("Drag the background to move. Click expand to return to fdm.")
         .preferredColorScheme(model.theme.colorScheme)
+    }
+    private func controlSymbol(_ name: String) -> some View {
+        Image(systemName: name)
+            .resizable().scaledToFit()
+            .font(.system(size: 12, weight: .medium))
+            .frame(height: 12)
+            .frame(width: 22, height: 28, alignment: .center)
+            .contentShape(Rectangle())
     }
 }
 
