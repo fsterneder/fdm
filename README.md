@@ -27,6 +27,8 @@ open dist/fdm.app
 
 Completed beats stay filled. With Accent enabled, the first indicator uses the Play accent; other active beats use the current-beat color. The slim widget shows read-only BPM and beat progress, with a flat expand control.
 
+Tempo, sound, accent, and subdivision changes take effect on the next beat. Beats per bar and gap changes take effect on the next bar, without restarting playback.
+
 ## Gap practice
 
 Play 1, 2, or 4 audible bars, then 1–8 silent bars. **Random** chooses a fresh audible run length each cycle. The subdivision slot shows silent bars remaining, such as **2/2 → 1/2**.
@@ -34,3 +36,4 @@ Play 1, 2, or 4 audible bars, then 1–8 silent bars. **Random** chooses a fresh
 Existing beat-based gap lengths round up to whole bars. Accent is independent of meter. Closing the main window quits the app.
 
 The Dock icon follows the selected theme; Finder uses Default. Homebrew installation is not published yet. See [CHANGELOG.md](CHANGELOG.md).
+

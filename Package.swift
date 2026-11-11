@@ -6,7 +6,10 @@ let package = Package(
     products: [.executable(name: "fdm", targets: ["Metronom"])],
     targets: [
         .target(name: "TempoCore"),
-        .executableTarget(name: "Metronom", dependencies: ["TempoCore"]),
+        .target(name: "RealtimeAudio", publicHeadersPath: "include"),
+        .executableTarget(name: "Metronom", dependencies: ["TempoCore", "RealtimeAudio"]),
         .testTarget(name: "TempoCoreTests", dependencies: ["TempoCore"])
-    ]
+    ],
+    cLanguageStandard: .c11
 )
+

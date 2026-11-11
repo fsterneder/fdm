@@ -56,19 +56,19 @@ final class Metronome: ObservableObject {
     @Published var bpm: Int { didSet {
         let bounded = Tempo.clamp(bpm)
         if bpm != bounded { bpm = bounded; return }
-        UserDefaults.standard.set(bpm, forKey: "bpm"); restart()
+        UserDefaults.standard.set(bpm, forKey: "bpm"); updatePlayback()
     } }
-    @Published var beats: Int { didSet { UserDefaults.standard.set(beats, forKey: "beats"); restart() } }
+    @Published var beats: Int { didSet { UserDefaults.standard.set(beats, forKey: "beats"); updatePlayback() } }
     @Published var accent: Bool {
-        didSet { UserDefaults.standard.set(accent, forKey: "accent"); restart() }
+        didSet { UserDefaults.standard.set(accent, forKey: "accent"); updatePlayback() }
     }
     @Published var gapBars: Int {
-        didSet { UserDefaults.standard.set(gapBars, forKey: "gapBars"); restart() }
+        didSet { UserDefaults.standard.set(gapBars, forKey: "gapBars"); updatePlayback() }
     }
-    @Published var subdivisions: Int { didSet { UserDefaults.standard.set(subdivisions, forKey: "subdivisions"); restart() } }
-    @Published var sound: Int { didSet { UserDefaults.standard.set(sound, forKey: "sound"); restart() } }
+    @Published var subdivisions: Int { didSet { UserDefaults.standard.set(subdivisions, forKey: "subdivisions"); updatePlayback() } }
+    @Published var sound: Int { didSet { UserDefaults.standard.set(sound, forKey: "sound"); updatePlayback() } }
     @Published var gap: Int {
-        didSet { UserDefaults.standard.set(gap, forKey: "gap"); restart() }
+        didSet { UserDefaults.standard.set(gap, forKey: "gap"); updatePlayback() }
     }
     @Published var theme: InstrumentTheme {
         didSet {
@@ -83,27 +83,33 @@ final class Metronome: ObservableObject {
             lastAudibleVolume = volume
             UserDefaults.standard.set(volume, forKey: "lastAudibleVolume")
         }
-        player.volume = Float(volume)
+        audio.volume = Float(volume)
         UserDefaults.standard.set(volume, forKey: "volume")
     } }
     @Published private(set) var playing = false
-    @Published private(set) var currentBeat = -1
-    @Published private(set) var gapBarsRemaining = 0
+    private struct PlaybackSnapshot {
+        let event: RenderedBeat
+        let time: TimeInterval
+    }
+    @Published private var snapshot: PlaybackSnapshot?
+    var currentBeat: Int { snapshot?.event.beat ?? -1 }
+    var gapBarsRemaining: Int { snapshot?.event.gapBarsRemaining ?? 0 }
     var inSilentBar: Bool { gapBarsRemaining > 0 }
-    @Published private(set) var beatTime: TimeInterval = 0
-    @Published private(set) var beatNumber = 0
+    var beatTime: TimeInterval { snapshot?.time ?? 0 }
+    var beatNumber: UInt64 { snapshot?.event.number ?? 0 }
+    private var activeConfiguration: PlaybackConfiguration {
+        playing ? (snapshot?.event.configuration ?? requestedConfiguration) : requestedConfiguration
+    }
+    var playbackBeats: Int { activeConfiguration.beats }
+    var playbackAccent: Bool { activeConfiguration.accent }
+    var playbackBPM: Int { activeConfiguration.bpm }
+    var playbackGapBars: Int { activeConfiguration.gapBars }
     @Published var error: String?
-    private let engine = AVAudioEngine()
-    private let player = AVAudioPlayerNode()
-    private let format = AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1)!
+    private let audio = ContinuousAudio()
     private var timer: Timer?
-    private var nextFrame: Double = 0
-    private var tick = 0
-    private var gapSequence = GapSequence()
-    private var generation = UUID()
+    private var epoch: UInt64 = 0
+    private var pendingBeat: RenderedBeat?
     private var tapper = TapTempo()
-    private var buffers: [AVAudioPCMBuffer] = []
-    private var silentBuffers: [AVAudioPCMBuffer] = []
     private var activity: NSObjectProtocol?
 
     init() {
@@ -127,9 +133,7 @@ final class Metronome: ObservableObject {
         theme = InstrumentTheme.restored(defaults.string(forKey: "theme"))
         let savedGap = defaults.integer(forKey: "gap")
         gap = GapCycle.options.contains(savedGap) ? savedGap : 0
-        engine.attach(player)
-        engine.connect(player, to: engine.mainMixerNode, format: format)
-        player.volume = Float(volume)
+        audio.volume = Float(volume)
         // Persist the migration so a new one-beat meter is never mistaken for legacy No Accent.
         defaults.set(pattern.beats, forKey: "beats")
         defaults.set(pattern.accent, forKey: "accent")
@@ -146,29 +150,23 @@ final class Metronome: ObservableObject {
     func tap() {
         if let tempo = tapper.tap(at: ProcessInfo.processInfo.systemUptime) { bpm = tempo }
     }
-    private func restart() { if playing { stop(); start() } }
+    private var requestedConfiguration: PlaybackConfiguration {
+        PlaybackConfiguration(bpm: bpm, beats: beats, subdivisions: subdivisions,
+                              voice: sound, accent: accent, gap: gap, gapBars: gapBars)
+    }
+    private func updatePlayback() { audio.configure(requestedConfiguration) }
     func start() {
         guard !playing else { return }
+        updatePlayback()
         do {
-            if !engine.isRunning { try engine.start() }
-            generation = UUID()
-            buffers = (0...2).map { makeClick(kind: $0) }
-            silentBuffers = buffers.map { source in
-                let silence = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: source.frameLength)!
-                silence.frameLength = source.frameLength
-                silence.floatChannelData![0].update(repeating: 0, count: Int(source.frameLength))
-                return silence
-            }
+            epoch = try audio.start()
+            snapshot = nil
+            pendingBeat = nil
             playing = true
-            gapBarsRemaining = 0
-            gapSequence = GapSequence()
-            nextFrame = 0; tick = 0; currentBeat = -1; beatTime = 0; beatNumber = 0
-            activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .idleSystemSleepDisabled], reason: "Playing metronome")
-            // Audio sample times determine every click; the timer only replenishes the queue.
-            schedule(until: 24_000)
-            player.play(at: AVAudioTime(hostTime: mach_absolute_time() + AVAudioTime.hostTime(forSeconds: 0.08)))
-            timer = Timer.scheduledTimer(withTimeInterval: 0.025, repeats: true) { [weak self] _ in
-                Task { @MainActor in self?.refill() }
+            activity = ProcessInfo.processInfo.beginActivity(
+                options: [.userInitiated, .idleSystemSleepDisabled], reason: "Playing metronome")
+            timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
+                Task { @MainActor in self?.refreshDisplay() }
             }
             if let timer { RunLoop.main.add(timer, forMode: .common) }
         } catch {
@@ -177,54 +175,28 @@ final class Metronome: ObservableObject {
         }
     }
     func stop() {
-        generation = UUID(); timer?.invalidate(); timer = nil
-        player.stop(); playing = false; currentBeat = -1; beatTime = 0; gapBarsRemaining = 0
+        audio.stop()
+        timer?.invalidate(); timer = nil
+        playing = false; snapshot = nil; pendingBeat = nil
         if let activity { ProcessInfo.processInfo.endActivity(activity); self.activity = nil }
     }
-    private func refill() {
-        guard playing, let render = player.lastRenderTime,
-              let time = player.playerTime(forNodeTime: render) else { return }
-        // Recover cleanly after a long scheduling stall rather than enqueueing past events.
-        if nextFrame < Double(time.sampleTime) { stop(); start(); return }
-        schedule(until: Double(time.sampleTime) + 24_000)
-    }
-    private func schedule(until horizon: Double) {
-        let run = generation
-        while nextFrame < horizon {
-            let mainBeat = tick % subdivisions == 0
-            let beat = (tick / subdivisions) % beats
-            let kind = BeatPattern.soundKind(beat: beat, isMainBeat: mainBeat, accent: accent)
-            let silent = gapSequence.isSilent(tick: tick, beats: beats, subdivisions: subdivisions, audibleBars: gap, silentBars: gapBars)
-            let remaining = gapSequence.silentBarsRemaining
-            let buffer = silent ? silentBuffers[kind] : buffers[kind]
-            let frame = AVAudioFramePosition(nextFrame.rounded())
-            player.scheduleBuffer(buffer, at: AVAudioTime(sampleTime: frame, atRate: format.sampleRate), options: [], completionCallbackType: .dataPlayedBack) { [weak self] _ in
-                if mainBeat {
-                    Task { @MainActor in
-                        guard let self, self.playing, self.generation == run else { return }
-                        self.beatTime = Date.timeIntervalSinceReferenceDate
-                        self.beatNumber &+= 1
-                        self.gapBarsRemaining = remaining
-                        self.currentBeat = beat
-                    }
-                }
-            }
-            nextFrame += Tempo.frames(bpm: bpm, subdivisions: subdivisions, sampleRate: format.sampleRate)
-            tick += 1
+    private func refreshDisplay() {
+        guard playing else { return }
+        let now = mach_absolute_time()
+        var latest: RenderedBeat?
+        while let event = pendingBeat ?? audio.poll() {
+            pendingBeat = nil
+            guard event.epoch == epoch else { continue }
+            if event.hostTime > now { pendingBeat = event; break }
+            latest = event
         }
-    }
-    private func makeClick(kind: Int) -> AVAudioPCMBuffer {
-        let voice = ClickVoice(rawValue: sound) ?? .click
-        let samples = voice.samples(kind: kind, sampleRate: format.sampleRate)
-        let count = AVAudioFrameCount(samples.count)
-        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: count)!
-        buffer.frameLength = count
-        samples.withUnsafeBufferPointer { source in
-            buffer.floatChannelData![0].update(from: source.baseAddress!, count: samples.count)
+        if let event = latest {
+            let elapsed = AVAudioTime.seconds(forHostTime: now - event.hostTime)
+            snapshot = PlaybackSnapshot(event: event, time: Date.timeIntervalSinceReferenceDate - elapsed)
         }
-        return buffer
     }
 }
+
 
 enum InstrumentTheme: String, CaseIterable {
     case charcoal, dracula, nord, gruvbox, githubLight, monokai, solarizedLight, desert, paperColorLight, peachpuff, tokyoNight
@@ -952,3 +924,4 @@ final class WindowAttachment: NSView {
         if let window { onWindow?(window) }
     }
 }
+

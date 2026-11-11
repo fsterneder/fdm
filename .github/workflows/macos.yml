@@ -5,9 +5,11 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
+      - run: bash scripts/test-transport.sh
       - run: swift test
       - run: bash scripts/build.sh
       - uses: actions/upload-artifact@v4
         with:
           name: fdm-macOS
-          path: dist/fdm-0.13.0.zip
+          path: dist/fdm-0.14.0.zip
+

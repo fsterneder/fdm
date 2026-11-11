@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.0
+
+- Keep the audio clock running when tempo, sound, accent, or subdivision changes; apply edits on the next beat.
+- Apply meter and gap changes at the next bar without resetting the beat count.
+- Render clicks directly on the audio thread so UI activity cannot drain a queued buffer.
+- Drive beat lights and gap countdown from the configuration actually playing.
+- Add portable transport regression tests.
+
 ## 0.13.0
 
 - Implement the approved balanced right-hand control column: Widget, Settings, Tap, Speaker, Play.
@@ -158,3 +166,4 @@
 - Show GAP in both LCD modes during silence.
 - Use four-pulse gap bars when No accent is selected.
 - Update app bundle and release archive version to 0.3.0 (build 4).
+

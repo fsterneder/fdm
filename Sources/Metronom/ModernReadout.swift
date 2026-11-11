@@ -33,7 +33,7 @@ struct ModernReadout: View {
                     }
                     .frame(width: 196 * scale)
                     VStack(spacing: 2 * scale) {
-                        Text(model.inSilentBar ? "\(model.gapBarsRemaining)/\(model.gapBars)" : subdivisionText)
+                        Text(model.inSilentBar ? "\(model.gapBarsRemaining)/\(model.playbackGapBars)" : subdivisionText)
                             .font(.system(size: (model.inSilentBar ? 54 : 60) * scale, weight: .regular))
                             .monospacedDigit()
                             .foregroundColor(model.inSilentBar ? palette.neutral : palette.beat)
@@ -53,7 +53,7 @@ struct ModernReadout: View {
                     .help("Drag up/down to change subdivision.")
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(model.inSilentBar ? "Silent bars remaining" : "Subdivision")
-                    .accessibilityValue(model.inSilentBar ? "\(model.gapBarsRemaining) of \(model.gapBars) bars remaining" : "\(model.subdivisions) clicks per beat")
+                    .accessibilityValue(model.inSilentBar ? "\(model.gapBarsRemaining) of \(model.playbackGapBars) bars remaining" : "\(model.subdivisions) clicks per beat")
                 }
                 .frame(height: 112 * scale)
                 BeatLights(model: model, width: DisplayGeometry.width * scale, maxDiameter: 68 * scale, spacing: 24 * scale)
@@ -130,12 +130,12 @@ private struct BeatLights: View {
     let spacing: CGFloat
     var outlineOpacity: Double = 1
     var body: some View {
-        let count = max(1, model.beats)
+        let count = max(1, model.playbackBeats)
         let playing = model.playing
-        let accent = model.accent
+        let accent = model.playbackAccent
         let current = model.currentBeat
         let beatTime = model.beatTime
-        let bpm = model.bpm
+        let bpm = model.playbackBPM
         let palette = model.theme.palette
         let gap = count > 4 ? spacing / 2 : spacing
         let diameter = min(maxDiameter, (width - CGFloat(count - 1) * gap) / CGFloat(count))
@@ -260,3 +260,4 @@ private final class ValueDragView: NSView {
         dragging = false
     }
 }
+
