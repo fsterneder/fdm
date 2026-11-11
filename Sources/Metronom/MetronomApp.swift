@@ -362,7 +362,6 @@ extension EnvironmentValues {
 private enum Finish {
     static let lcd = Color(red: 0.74, green: 0.81, blue: 0.66)
     static let orange = Color(red: 1.0, green: 0.49, blue: 0.25)
-    static let transportRed = Color(red: 0.92, green: 0.20, blue: 0.24)
 }
 
 struct InstrumentButtonStyle: ButtonStyle {
@@ -913,7 +912,7 @@ struct TempoWidget: View {
             Spacer(minLength: 0)
             VStack(spacing: 6) {
                 Circle()
-                    .fill(model.playing ? Finish.transportRed : palette.foreground.opacity(0.18))
+                    .fill(model.playing ? palette.accent : palette.foreground.opacity(0.18))
                     .frame(width: 9, height: 9)
                     .frame(width: 28, height: 28)
                     .help(model.playing ? "Metronome is playing" : "Metronome is stopped")
