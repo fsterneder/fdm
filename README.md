@@ -30,7 +30,7 @@ The build embeds a pre-rendered, multi-resolution macOS app icon for Finder and 
 
 ## Visual design
 
-Version 0.2.0 replaces the default bordered buttons with rounded hardware-style controls, an orange transport button, custom sound selectors, compact pattern menus, a recessed sage tempo display, and a calibrated tempo dial. Beat indicators use the same playback state in both window modes. The bundled icon and build number are updated; quit any older running copy before opening the rebuilt app.
+Version 0.2.0 replaces the default bordered buttons with rounded hardware-style controls, a grey transport button that turns red during playback, custom sound selectors, compact pattern menus, a hardware-style grey-green LCD with vector seven-segment tempo and beat digits, a voice number, and triangular beat markers, and a calibrated tempo dial. Beat indicators use the same playback state in both window modes. The main LCD follows the KDM-3 reference layout: TEMPO, BEAT, and VOICE (1–3 for Click/Wood/Bright). Triangular markers fill through the current beat and return to outlines when stopped. The widget uses the same segmented digits and triangular markers in a compact LCD. The bundled icon and build number are updated; quit any older running copy before opening the rebuilt app.
 
 ## Controls
 
