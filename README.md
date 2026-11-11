@@ -25,7 +25,7 @@ open dist/fdm.app
 - **↑/↓:** tempo ±1. **←/→:** tempo ±10. **Shift + ↑/↓:** beats. **Shift + ←/→:** gap.
 - **Tab or &#92;:** switch to the floating widget.
 
-Completed beats stay filled. With Accent enabled, the first indicator uses the Play accent; other active beats use the current-beat color. Beat-count and accent edits appear immediately; their audio changes follow the boundaries below. The widget shows read-only BPM and beat progress, with a flat expand control.
+Completed beats stay filled. With Accent enabled, the first indicator uses the Play accent and blends into the current-beat color while active; other active beats use the current-beat color. Beat-count and accent edits appear immediately; their audio changes follow the boundaries below. The widget shows read-only BPM and beat progress, with a flat expand control.
 
 Tempo, sound, accent, and subdivision changes take effect on the next beat. Beats per bar and gap changes take effect on the next bar, without restarting playback.
 
@@ -33,7 +33,7 @@ Tempo, sound, accent, and subdivision changes take effect on the next beat. Beat
 
 Play 1, 2, or 4 audible bars, then 1–8 silent bars. **Random** chooses a fresh audible run length each cycle. The Gap value always shows the selected interval; the dot row shows progress through audible and silent bars.
 
-When Gap is on, small neutral dots below the beats show the bar sequence: current brightest, audible softer, silent faint. Random shows the run chosen for the current cycle.
+When Gap is on, small neutral dots below the beats show the bar sequence: current brightest, audible softer, silent faint. Random keeps its audible run hidden, then shows progress through the silent bars.
 
 Existing beat-based gap lengths round up to whole bars. Accent is independent of meter. Closing the main window quits the app.
 

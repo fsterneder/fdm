@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.2
+
+- Keep Random's chosen audible run hidden in the bar preview and accessibility text; show only an unknown-run symbol and silent-bar progress.
+- Blend accent and current-beat colors with a gradient when they coincide, in both windows.
+
 ## 0.16.1
 
 - Keep the Gap value and label fixed at the selected setting during silence.

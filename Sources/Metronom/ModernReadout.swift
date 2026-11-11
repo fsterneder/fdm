@@ -132,25 +132,38 @@ private struct BarSequenceDots: View {
         let audible = model.sequenceAudibleBars
         let total = audible + model.sequenceSilentBars
         let current = model.sequenceCurrentBar
+        let random = model.gap == GapCycle.random
+        let currentSilent = current >= audible && current >= 0 ? current - audible : -1
         return HStack(spacing: 8 * scale) {
-            if audible == 0 {
+            if random {
+                // A fixed-width unknown run never reveals its randomly chosen length.
                 Image(systemName: "shuffle").font(.system(size: 9 * scale))
-                    .foregroundColor(neutral.opacity(0.55))
-            }
-            ForEach(0..<total, id: \.self) { index in
-                Circle()
-                    .fill(neutral.opacity(index == current ? 1 : (index < audible ? 0.55 : 0.18)))
-                    .frame(width: 7 * scale, height: 7 * scale)
+                    .foregroundColor(neutral.opacity(current >= 0 && currentSilent < 0 ? 1 : 0.55))
+                ForEach(0..<model.sequenceSilentBars, id: \.self) { index in
+                    Circle()
+                        .fill(neutral.opacity(index == currentSilent ? 1 : 0.18))
+                        .frame(width: 7 * scale, height: 7 * scale)
+                }
+            } else {
+                ForEach(0..<total, id: \.self) { index in
+                    Circle()
+                        .fill(neutral.opacity(index == current ? 1 : (index < audible ? 0.55 : 0.18)))
+                        .frame(width: 7 * scale, height: 7 * scale)
+                }
             }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Gap bar sequence")
-        .accessibilityValue(current >= 0
-            ? "Bar \(current + 1) of \(total), \(current < audible ? "audible" : "silent"). \(audible) audible and \(model.sequenceSilentBars) silent bars."
-            : (audible == 0
-                ? "Random audible run, then \(model.sequenceSilentBars) silent bars."
+        .accessibilityValue(random
+            ? (currentSilent >= 0
+                ? "Silent bar \(currentSilent + 1) of \(model.sequenceSilentBars)."
+                : "Random audible run, length hidden; followed by \(model.sequenceSilentBars) silent bars.")
+            : (current >= 0
+                ? "Bar \(current + 1) of \(total), \(current < audible ? "audible" : "silent"). \(audible) audible and \(model.sequenceSilentBars) silent bars."
                 : "\(audible) audible and \(model.sequenceSilentBars) silent bars."))
-        .help("Each small dot is one bar. Brightest: current; softer: audible; faint: silent.")
+        .help(random
+            ? "The random audible run stays hidden. Dots show the silent bars; brightest marks the current bar."
+            : "Each small dot is one bar. Brightest: current; softer: audible; faint: silent.")
     }
 }
 
@@ -233,9 +246,13 @@ private struct BeatLights: View {
                     let isPlayed = count > 1 && playing && current >= 0 && index < current
                     let isAccented = accent && index == 0
                     let color = isAccented ? palette.action : (isCurrent ? palette.playingBeat : palette.neutral)
+                    let highlight = LinearGradient(
+                        colors: isAccented && isCurrent ? [palette.action, palette.playingBeat] : [color, color],
+                        startPoint: .topLeading, endPoint: .bottomTrailing)
                     Circle()
-                        .fill(isCurrent || isPlayed ? color : Color.clear)
-                        .overlay(Circle().strokeBorder(color.opacity(isCurrent || isPlayed ? 1 : outlineOpacity), lineWidth: min(2.5, max(1.25, diameter * 0.04))))
+                        .fill(highlight).opacity(isCurrent || isPlayed ? 1 : 0)
+                        .overlay(Circle().strokeBorder(highlight, lineWidth: min(2.5, max(1.25, diameter * 0.04)))
+                            .opacity(isCurrent || isPlayed ? 1 : outlineOpacity))
                         .frame(width: diameter, height: diameter)
                         .accessibilityLabel("\(isAccented ? "Accented beat" : "Beat") \(index + 1) of \(count)")
                         .accessibilityValue(isCurrent ? "Current" : (isPlayed ? "Played" : "Upcoming"))
