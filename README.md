@@ -31,7 +31,7 @@ Tempo, sound, accent, and subdivision changes take effect on the next beat. Beat
 
 ## Gap practice
 
-Play 1, 2, or 4 audible bars, then 1–8 silent bars. **Random** chooses a fresh audible run length each cycle. The Gap slot shows silent bars remaining, such as **2/2 → 1/2**.
+Play 1, 2, or 4 audible bars, then 1–8 silent bars. **Random** chooses a fresh audible run length each cycle. The Gap value always shows the selected interval; the dot row shows progress through audible and silent bars.
 
 When Gap is on, small neutral dots below the beats show the bar sequence: current brightest, audible softer, silent faint. Random shows the run chosen for the current cycle.
 

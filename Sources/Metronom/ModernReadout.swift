@@ -25,9 +25,7 @@ struct ModernReadout: View {
     private var gapIndex: Int { GapCycle.options.firstIndex(of: model.gap) ?? 0 }
     @ViewBuilder
     private var gapValue: some View {
-        if model.inSilentBar {
-            Text("\(model.gapBarsRemaining)/\(model.playbackGapBars)").monospacedDigit()
-        } else if model.gap == GapCycle.random {
+        if model.gap == GapCycle.random {
             Image(systemName: "shuffle")
         } else if model.gap == 0 {
             Image(systemName: "circle.slash")
@@ -85,7 +83,7 @@ struct ModernReadout: View {
                             .foregroundColor(palette.gap)
                             .minimumScaleFactor(0.6).lineLimit(1)
                             .frame(width: column - 8 * scale, height: 94 * scale)
-                        caption(model.inSilentBar ? "SILENT" : "GAP", scale: scale)
+                        caption("GAP", scale: scale)
                     }
                     .frame(width: column)
                     .overlay {
@@ -97,10 +95,8 @@ struct ModernReadout: View {
                     }
                     .help("\(gapDescription). Drag up/down: Off, 1, 2, 4, Random.")
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(model.inSilentBar ? "Silent bars remaining; gap setting" : "Gap")
-                    .accessibilityValue(model.inSilentBar
-                        ? "\(model.gapBarsRemaining) of \(model.playbackGapBars) silent bars remaining. \(gapDescription)"
-                        : gapDescription)
+                    .accessibilityLabel("Gap")
+                    .accessibilityValue(gapDescription)
                     .accessibilityAdjustableAction { direction in
                         setGap(index: gapIndex + (direction == .increment ? 1 : -1))
                     }
@@ -109,13 +105,15 @@ struct ModernReadout: View {
                 .padding(.bottom, 28 * scale)
                 BeatLights(model: model, width: DisplayGeometry.width * scale, maxDiameter: 68 * scale, spacing: 24 * scale)
                     .frame(height: 68 * scale)
-                Group {
-                    if model.gap != 0 { BarSequenceDots(model: model, scale: scale) }
-                }
-                .frame(width: DisplayGeometry.width * scale, height: 8 * scale)
-                .padding(.top, 18 * scale)
+                // An unconditional slot keeps the beat and metric rows fixed.
+                Color.clear
+                    .frame(width: DisplayGeometry.width * scale, height: 8 * scale)
+                    .overlay {
+                        if model.gap != 0 { BarSequenceDots(model: model, scale: scale) }
+                    }
+                    .padding(.top, 18 * scale)
             }
-            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .center)
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
         }
     }
     private func caption(_ title: String, scale: CGFloat) -> some View {

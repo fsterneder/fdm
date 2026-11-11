@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.1
+
+- Keep the Gap value and label fixed at the selected setting during silence.
+- Reserve an unconditional slot for the bar preview so toggling Gap never shifts the other rows.
+
 ## 0.16.0
 
 - Show a small neutral bar-sequence row below the beat indicators when Gap is enabled.
