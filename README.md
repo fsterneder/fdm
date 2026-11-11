@@ -16,15 +16,16 @@ open dist/fdm-3.app
 
 ## Controls
 
-- **BPM:** drag up/down to adjust, click to type, or use the slider. Range: 30–252.
-- **Beat arrows:** change beats (No Accent, then 2–9).
+- **BPM:** drag up/down to adjust (30–252). Double-click for optional numeric entry.
+- **Subdivision:** drag up/down through quarter notes, eighths, triplets, and sixteenths.
+- **Settings:** Beats (No Accent, then 2–9), Gap, Sound, Theme, and volume.
 - **Space:** Start/Stop. **T:** tap. **M:** mute.
 - **↑/↓:** tempo ±1. **←/→:** tempo ±10. **Shift + ↑/↓:** beats.
 - **Tab or &#92;:** switch to the floating widget.
 
-Completed beats stay filled; the current beat uses the theme's highlight. No Accent flashes one light per beat. Subdivision and GAP share one slot. Settings hold Sound, Theme, Subdivision, Gap, and volume.
+Completed beats stay filled; the current beat uses the theme's highlight. No Accent flashes one light per beat. Beat lights show progress and do not change the beat count when dragged.
 
-Tempo entry accepts only up to three digits. Enter or clicking away applies it; Escape cancels. Closing the main window quits the app.
+The main window shows subdivision or GAP; the single-row widget shows only BPM and beat progress. Start has a neutral background while stopped and an accent fill during playback. Closing the main window quits the app.
 
 ## Gap practice
 

@@ -1,6 +1,16 @@
 import XCTest
 @testable import TempoCore
 final class TempoTests: XCTestCase {
+    func testSubdivisionDragStepsAndReversesAtBound() {
+        var drag = ValueScrubber(value: 2, bounds: 1...4, pointsPerStep: 12)
+        XCTAssertEqual(drag.move(upwardPoints: 6), 2)
+        XCTAssertEqual(drag.move(upwardPoints: 6), 3)
+        XCTAssertEqual(drag.move(upwardPoints: 120), 4)
+        XCTAssertEqual(drag.move(upwardPoints: -12), 3)
+        XCTAssertEqual(drag.move(upwardPoints: -120), 1)
+        XCTAssertEqual(drag.move(upwardPoints: 12), 2)
+    }
+
     func testVerticalScrubFollowsMouseDirectionAndAccumulatesSmallMoves() {
         var scrub = TempoScrubber(bpm: 120)
         XCTAssertEqual(scrub.move(upwardPoints: 1), 120)

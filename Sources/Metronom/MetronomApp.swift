@@ -371,7 +371,7 @@ struct InlineTempoField: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
     func makeNSView(context: Context) -> NSTextField {
-        let field = NSTextField(string: String(bpm))
+        let field = TempoEntryField(string: String(bpm))
         field.isBordered = false
         field.isBezeled = false
         field.drawsBackground = false
@@ -384,11 +384,6 @@ struct InlineTempoField: NSViewRepresentable {
         field.textColor = NSColor(color)
         field.delegate = context.coordinator
         field.setAccessibilityLabel("Tempo in beats per minute")
-        DispatchQueue.main.async {
-            guard let window = field.window else { return }
-            window.makeFirstResponder(field)
-            field.selectText(nil)
-        }
         return field
     }
     func updateNSView(_ field: NSTextField, context: Context) {
@@ -429,6 +424,20 @@ struct InlineTempoField: NSViewRepresentable {
                 parent.onCancel()
             }
             window?.makeFirstResponder(nil)
+        }
+    }
+}
+
+// Wait for a real window before requesting keyboard focus.
+@MainActor
+final class TempoEntryField: NSTextField {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard window != nil else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let window = self.window else { return }
+            window.makeFirstResponder(self)
+            self.selectText(nil)
         }
     }
 }
@@ -552,21 +561,6 @@ final class ChoiceAnchorView: NSView {
 }
 
 @MainActor
-struct SubdivisionSelector: View {
-    @Binding var value: Int
-    private let labels = ["Quarter notes", "Eighth notes", "Triplets", "16th notes"]
-    var body: some View {
-        ChoiceDropdown(
-            title: "SUBDIVISION", selectedID: String(value),
-            selectedLabel: labels[min(3, max(0, value - 1))],
-            options: labels.enumerated().map { DropdownChoice(id: String($0.offset + 1), label: $0.element) }
-        ) { id in
-            if let number = Int(id), (1...4).contains(number) { value = number }
-        }
-    }
-}
-
-@MainActor
 struct InstrumentView: View {
     @ObservedObject var model: Metronome
     var showWidget: () -> Void
@@ -577,30 +571,6 @@ struct InstrumentView: View {
             header
             ModernReadout(model: model).frame(height: DisplayGeometry.mainHeight)
             HStack(spacing: 8) {
-                Button { model.bpm = Tempo.clamp(model.bpm - 1) } label: {
-                    Image(systemName: "minus").frame(width: 24, height: 28)
-                }
-                .buttonStyle(.plain).foregroundColor(palette.neutral)
-                .help("Decrease tempo").accessibilityLabel("Decrease tempo")
-                Slider(value: Binding(
-                    get: { Double(model.bpm) },
-                    set: { value in
-                        let bpm = Tempo.clamp(Int(value.rounded()))
-                        if model.bpm != bpm { model.bpm = bpm }
-                    }), in: 30...252, step: 1)
-                    .tint(palette.tempo)
-                    .accessibilityLabel("Tempo")
-                    .accessibilityValue("\(model.bpm) beats per minute")
-                Button { model.bpm = Tempo.clamp(model.bpm + 1) } label: {
-                    Image(systemName: "plus").frame(width: 24, height: 28)
-                }
-                .buttonStyle(.plain).foregroundColor(palette.neutral)
-                .help("Increase tempo").accessibilityLabel("Increase tempo")
-            }
-            .frame(height: 28)
-            HStack(spacing: 8) {
-                beatButton(delta: -1)
-                beatButton(delta: 1)
                 Button { model.toggleMute() } label: {
                     Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
                         .font(.system(size: 16)).frame(width: 44, height: 44)
@@ -614,9 +584,10 @@ struct InstrumentView: View {
                         Text(model.playing ? "Stop" : "Start")
                     }
                     .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(model.playing ? palette.activeForeground : palette.action)
                     .frame(maxWidth: .infinity, minHeight: 44)
                 }
-                .buttonStyle(InstrumentButtonStyle(accent: true, radius: 10))
+                .buttonStyle(InstrumentButtonStyle(accent: model.playing, radius: 10))
                 .help("Start / Stop (Space)")
                 .accessibilityLabel(model.playing ? "Stop metronome" : "Start metronome")
             }
@@ -635,7 +606,7 @@ struct InstrumentView: View {
         HStack(spacing: 12) {
             Text("fdm-3")
                 .font(.system(size: 22, weight: .bold, design: .rounded))
-                .tracking(-0.5).foregroundColor(palette.action)
+                .tracking(-0.5).foregroundColor(palette.neutral)
             Spacer(minLength: 8)
             Button { model.tap() } label: {
                 Text("TAP").font(.system(size: 11, weight: .semibold)).frame(width: 32, height: 32)
@@ -661,18 +632,7 @@ struct InstrumentView: View {
         }
         .frame(height: 32)
     }
-    private func beatButton(delta: Int) -> some View {
-        let atLimit = delta < 0 ? model.beats == 0 : model.beats == 9
-        return Button { model.adjustBeats(by: delta) } label: {
-            Image(systemName: delta < 0 ? "chevron.down" : "chevron.up")
-                .font(.system(size: 15, weight: .medium)).frame(width: 44, height: 44)
-        }
-        .buttonStyle(InstrumentButtonStyle(radius: 10))
-        .disabled(atLimit).opacity(atLimit ? 0.4 : 1)
-        .help(delta < 0 ? "Decrease beats (Shift + ↓)" : "Increase beats (Shift + ↑)")
-        .accessibilityLabel(delta < 0 ? "Decrease beats" : "Increase beats")
-        .accessibilityValue(model.beats == 0 ? "No accent" : "\(model.beats) beats per bar")
-    }
+
 }
 
 @MainActor
@@ -685,7 +645,7 @@ struct InstrumentSettings: View {
                 .foregroundColor(palette.neutral)
             VStack(spacing: 8) {
                 HStack(spacing: 8) {
-                    SubdivisionSelector(value: $model.subdivisions)
+                    beatSelector
                     gapSelector
                 }
                 HStack(spacing: 8) {
@@ -710,6 +670,20 @@ struct InstrumentSettings: View {
         .padding(16).frame(width: 300)
         .background(LinearGradient(colors: palette.bodyColors,
                                   startPoint: .topLeading, endPoint: .bottomTrailing))
+    }
+
+    private var beatSelector: some View {
+        ChoiceDropdown(
+            title: "BEATS", selectedID: String(model.beats),
+            selectedLabel: model.beats == 0 ? "No Accent" : String(model.beats),
+            options: Metronome.beatOptions.map {
+                DropdownChoice(id: String($0), label: $0 == 0 ? "No Accent" : String($0))
+            }
+        ) { id in
+            if let beats = Int(id), Metronome.beatOptions.contains(beats), model.beats != beats {
+                model.beats = beats
+            }
+        }
     }
 
     private var gapSelector: some View {
@@ -877,26 +851,15 @@ struct TempoWidget: View {
     var showInstrument: () -> Void
     var body: some View {
         HStack(spacing: 8) {
-            ModernReadout(model: model)
-                .frame(width: DisplayGeometry.widgetDisplayWidth, height: DisplayGeometry.widgetDisplayHeight)
-            VStack(spacing: 6) {
-                Circle()
-                    .fill(model.playing ? palette.action : palette.neutral.opacity(0.18))
-                    .frame(width: 9, height: 9)
+            CompactReadout(model: model)
+            Button(action: showInstrument) {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 11, weight: .medium))
                     .frame(width: 28, height: 28)
-                    .help(model.playing ? "Metronome is playing" : "Metronome is stopped")
-                    .accessibilityLabel("Playback status")
-                    .accessibilityValue(model.playing ? "Playing" : "Stopped")
-
-                Button(action: showInstrument) {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 11, weight: .medium))
-                        .frame(width: 28, height: 28)
-                }
-                .buttonStyle(InstrumentButtonStyle(radius: 8))
-                .help("Return to fdm-3 (Tab or \\)")
-                .accessibilityLabel("Return to full fdm-3 window")
             }
+            .buttonStyle(InstrumentButtonStyle(radius: 8))
+            .help("Return to fdm-3 (Tab or \\)")
+            .accessibilityLabel("Return to full fdm-3 window")
         }
         .padding(.horizontal, 10).frame(width: DisplayGeometry.widgetWidth, height: DisplayGeometry.widgetHeight)
         .background(LinearGradient(colors: palette.bodyColors,
@@ -914,7 +877,7 @@ struct TempoWidget: View {
             Button("Quit fdm-3") { model.stop(); NSApp.terminate(nil) }
         }
         .environment(\.instrumentTheme, model.theme)
-        .help("Drag the background to move. Drag BPM up/down to adjust it. Click expand to return to fdm-3.")
+        .help("Drag the background to move. Drag BPM up/down to adjust. Click expand to return to fdm-3.")
         .preferredColorScheme(model.theme.colorScheme)
     }
 }

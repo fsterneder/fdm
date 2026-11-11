@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.1
+
+- Remove the tempo slider and beat adjustment buttons.
+- Make BPM and subdivision vertically draggable; choose Beats and Gap in Settings.
+- Keep beat indicators read-only while preserving cumulative progress.
+- Keep the logo neutral and use the accent background only during playback.
+- Use double-click for optional BPM entry and request focus after the field attaches to its window.
+- Reduce the widget to a single row of draggable BPM, beat progress, and the expand control.
+
 ## 0.10.0
 
 - Adopt the modern interface: ordinary typography, equal-width tempo and subdivision/GAP fields, and prominent round beat lights.
