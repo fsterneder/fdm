@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0
+
+- Give IDE/Vim themes distinct colors for tempo, beats, labels, markers, pendulum, notes, and gap status.
+- Color related controls consistently; playback uses each theme's green or primary action color.
+- Match the widget status light to the Start/Stop color.
+- Keep Default's original hardware colors.
+
 ## 0.7.0
 
 - Use one proportionally scaled LCD layout in both the main window and widget.

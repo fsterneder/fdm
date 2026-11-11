@@ -37,7 +37,7 @@ open dist/fdm-3.app
 | Tab or &#92; | Toggle mini mode |
 | Speaker button / M | Mute / restore previous volume |
 
-Use the gear button for Subdivision, Gap, Sound, Theme, and volume. Tap tempo is in the header; the four round buttons beside the wheel control beats, mute, and Start/Stop. Click the BPM digits to edit them in place. Return or clicking away applies the value; Escape cancels. Only digits are accepted (up to three); an empty field restores the previous tempo; values are limited to 30–252 BPM. The main window and widget share the same LCD layout: tempo, beat count, pendulum, beat indicators, gap status, and subdivision notes. Voice is no longer shown on either display. Settings are remembered. Closing the main window quits the app.
+Use the gear button for Subdivision, Gap, Sound, Theme, and volume. Tap tempo is in the header; the four round buttons beside the wheel control beats, mute, and Start/Stop. Click the BPM digits to edit them in place. Return or clicking away applies the value; Escape cancels. Only digits are accepted (up to three); an empty field restores the previous tempo; values are limited to 30–252 BPM. The main window and widget share the same LCD layout: tempo, beat count, pendulum, beat indicators, gap status, and subdivision notes. Voice is no longer shown on either display. Themes use distinct palette colors for tempo, beats, labels, symbols, and controls in both windows. Settings are remembered. Closing the main window quits the app.
 
 ## Gap practice
 

@@ -243,6 +243,16 @@ enum InstrumentTheme: String, CaseIterable {
     var palette: InstrumentPalette { InstrumentPalette(theme: self) }
 }
 
+private struct ThemeHighlights {
+    let beat: UInt32
+    let labels: UInt32
+    let markers: UInt32
+    let pendulum: UInt32
+    let notes: UInt32
+    let gap: UInt32
+    let play: UInt32
+}
+
 struct InstrumentPalette {
     let theme: InstrumentTheme
     private func color(_ hex: UInt32) -> Color {
@@ -389,6 +399,70 @@ struct InstrumentPalette {
         default: return accent
         }
     }
+    private var highlights: ThemeHighlights {
+        switch theme {
+        case .charcoal:
+            return ThemeHighlights(beat: 0x141F18, labels: 0x141F18, markers: 0x141F18,
+                                   pendulum: 0x141F18, notes: 0x141F18, gap: 0x141F18, play: 0xFF7D40)
+        case .dracula:
+            return ThemeHighlights(beat: 0xFFB86C, labels: 0xFF79C6, markers: 0x50FA7B,
+                                   pendulum: 0x8BE9FD, notes: 0xF1FA8C, gap: 0xFF5555, play: 0x50FA7B)
+        case .nord:
+            return ThemeHighlights(beat: 0xB48EAD, labels: 0x81A1C1, markers: 0xA3BE8C,
+                                   pendulum: 0x88C0D0, notes: 0xEBCB8B, gap: 0xEBCB8B, play: 0xA3BE8C)
+        case .gruvbox:
+            return ThemeHighlights(beat: 0xFE8019, labels: 0x83A598, markers: 0xB8BB26,
+                                   pendulum: 0x8EC07C, notes: 0xD3869B, gap: 0xFABD2F, play: 0xB8BB26)
+        case .githubLight:
+            return ThemeHighlights(beat: 0x953800, labels: 0x8250DF, markers: 0x116329,
+                                   pendulum: 0x0550AE, notes: 0xBF3989, gap: 0xCF222E, play: 0x116329)
+        case .monokai:
+            return ThemeHighlights(beat: 0xFD971F, labels: 0x66D9EF, markers: 0xA6E22E,
+                                   pendulum: 0x66D9EF, notes: 0xE6DB74, gap: 0xE6DB74, play: 0xA6E22E)
+        case .solarizedLight:
+            return ThemeHighlights(beat: 0xCB4B16, labels: 0x586E75, markers: 0x859900,
+                                   pendulum: 0x268BD2, notes: 0x6C71C4, gap: 0x586E75, play: 0x2AA198)
+        case .desert:
+            return ThemeHighlights(beat: 0xFFA0A0, labels: 0x6DCEEB, markers: 0x89FB98,
+                                   pendulum: 0xF0E68C, notes: 0xFFDE9B, gap: 0xFFA0A0, play: 0x89FB98)
+        case .paperColorLight:
+            return ThemeHighlights(beat: 0xAF0000, labels: 0x005FAF, markers: 0x008700,
+                                   pendulum: 0x005F87, notes: 0x8700AF, gap: 0xD70000, play: 0x008700)
+        case .peachpuff:
+            return ThemeHighlights(beat: 0xC00058, labels: 0x406090, markers: 0x2E8B57,
+                                   pendulum: 0x008B8B, notes: 0x6A5ACD, gap: 0xA52A2A, play: 0xA52A2A)
+        case .tokyoNight:
+            return ThemeHighlights(beat: 0xFF9E64, labels: 0xBB9AF7, markers: 0x9ECE6A,
+                                   pendulum: 0x7DCFFF, notes: 0xE0AF68, gap: 0xF7768E, play: 0x9ECE6A)
+        }
+    }
+    private func lcdColor(_ value: UInt32) -> Color {
+        theme == .charcoal ? Color(red: 0.08, green: 0.12, blue: 0.095) : color(value)
+    }
+    var beatColor: Color { lcdColor(highlights.beat) }
+    var lcdLabelColor: Color { lcdColor(highlights.labels) }
+    var markerColor: Color { lcdColor(highlights.markers) }
+    var pendulumColor: Color { lcdColor(highlights.pendulum) }
+    var noteColor: Color { lcdColor(highlights.notes) }
+    var gapColor: Color { lcdColor(highlights.gap) }
+    var playColor: Color { theme == .charcoal ? accent : color(highlights.play) }
+    func settingTint(_ title: String) -> Color {
+        if theme == .charcoal { return muted }
+        // Small captions in low-contrast light palettes keep their readable text color.
+        if theme == .solarizedLight || theme == .peachpuff { return foreground }
+        if title == "GAP" {
+            if theme == .dracula { return beatColor }
+            if theme == .nord || theme == .desert || theme == .paperColorLight { return foreground }
+        }
+        if theme == .gruvbox && title == "SUBDIVISION" { return accent }
+        switch title {
+        case "SUBDIVISION": return noteColor
+        case "GAP": return gapColor
+        case "SOUND": return pendulumColor
+        default: return labelAccent
+        }
+    }
+
     var bodyColors: [Color] { theme == .charcoal ? [panel, ink] : [ink, ink] }
     var lcdGlass: [Color] {
         theme == .charcoal ? [
@@ -423,20 +497,24 @@ struct InstrumentButtonStyle: ButtonStyle {
     private var palette: InstrumentPalette { theme.palette }
     var accent = false
     var radius: CGFloat = 10
+    var tint: Color? = nil
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundColor(accent ? palette.activeForeground : palette.foreground.opacity(theme == .charcoal ? 0.87 : 1))
+        let controlTint = theme == .charcoal ? palette.accent : (tint ?? palette.accent)
+        let labelColor = theme == .charcoal ? palette.foreground.opacity(0.87)
+            : (theme.isLight ? palette.foreground : (tint ?? palette.foreground))
+        return configuration.label
+            .foregroundColor(accent ? palette.activeForeground : labelColor)
             .background(
                 LinearGradient(
                     colors: accent
-                        ? [palette.accent, palette.accent]
+                        ? [controlTint, controlTint]
                         : [palette.controlTop, palette.controlBottom],
                     startPoint: .top, endPoint: .bottom
                 ),
                 in: RoundedRectangle(cornerRadius: radius)
             )
             .overlay(RoundedRectangle(cornerRadius: radius)
-                .strokeBorder(theme == .charcoal ? palette.border.opacity(configuration.isPressed ? 0.05 : 0.10) : palette.accent.opacity(configuration.isPressed ? 0.15 : 0.4), lineWidth: 1))
+                .strokeBorder(theme == .charcoal ? palette.border.opacity(configuration.isPressed ? 0.05 : 0.10) : controlTint.opacity(configuration.isPressed ? 0.15 : 0.55), lineWidth: 1))
             .shadow(color: .black.opacity(configuration.isPressed || theme != .charcoal ? 0 : 0.3), radius: 2, y: 2)
             .brightness(configuration.isPressed ? -0.08 : 0)
             .offset(y: configuration.isPressed ? 1 : 0)
@@ -503,6 +581,12 @@ struct HardwareLCD: View {
         let theme = model.theme
         let palette = theme.palette
         let ink = theme == .charcoal ? Color(red: 0.08, green: 0.12, blue: 0.095) : palette.lcdDigitColor
+        let beatInk = palette.beatColor
+        let labelInk = palette.lcdLabelColor
+        let markerInk = palette.markerColor
+        let pendulumInk = palette.pendulumColor
+        let noteInk = palette.noteColor
+        let gapInk = palette.gapColor
         let bpm = model.bpm
         let subdivisions = model.subdivisions
         let beats = model.beats
@@ -532,12 +616,12 @@ struct HardwareLCD: View {
                 context.stroke(border, with: .color(theme == .charcoal ? .black.opacity(0.65) : palette.fieldBorder),
                                lineWidth: 2)
 
-                func label(_ text: String, x: CGFloat, y: CGFloat, size: CGFloat = 10) {
+                func label(_ text: String, x: CGFloat, y: CGFloat, size: CGFloat = 10, tint: Color? = nil) {
                     context.draw(Text(text).font(.system(size: size, weight: .medium))
-                        .foregroundColor(theme == .charcoal ? ink : palette.foreground),
+                        .foregroundColor(tint ?? labelInk),
                         at: CGPoint(x: x, y: y), anchor: .topLeading)
                 }
-                func number(_ value: Int, places: Int, x: CGFloat, y: CGFloat, height: CGFloat) {
+                func number(_ value: Int, places: Int, x: CGFloat, y: CGFloat, height: CGFloat, tint: Color? = nil) {
                     let chars = Array(String(value))
                     let advance = height * (46.0 / 76.0)
                     for index in 0..<places {
@@ -545,35 +629,35 @@ struct HardwareLCD: View {
                         if source >= 0, source < chars.count, let digit = chars[source].wholeNumberValue {
                             context.fill(LCDSegments.path(digit: digit,
                                 origin: CGPoint(x: x + CGFloat(index) * advance, y: y),
-                                height: height), with: .color(ink))
+                                height: height), with: .color(tint ?? ink))
                         }
                     }
                 }
 
                 if !hideTempoDigits { number(bpm, places: 3, x: 65, y: 16, height: 64) }
-                number(beats, places: 1, x: 235, y: 16, height: 64)
+                number(beats, places: 1, x: 235, y: 16, height: 64, tint: beatInk)
                 label("TEMPO", x: 9, y: 67, size: 11)
                 label("BEAT", x: 194, y: 67, size: 11)
-                if inSilentBar { label("GAP", x: 194, y: 87, size: 10) }
+                if inSilentBar { label("GAP", x: 194, y: 87, size: 10, tint: gapInk) }
 
                 // Subdivision notation shares the bottom baseline with beat markers.
                 let stems: [CGFloat] = subdivisions == 1 ? [259] : (subdivisions == 3 ? [246, 257, 268] : [248, 268])
                 for x in stems {
                     context.fill(Path(ellipseIn: CGRect(x: x - 7, y: 119, width: 8, height: 5)),
-                                 with: .color(ink))
+                                 with: .color(noteInk))
                     var stem = Path()
                     stem.move(to: CGPoint(x: x, y: 121))
                     stem.addLine(to: CGPoint(x: x, y: 99))
-                    context.stroke(stem, with: .color(ink), lineWidth: 1.7)
+                    context.stroke(stem, with: .color(noteInk), lineWidth: 1.7)
                 }
                 if subdivisions > 1, let first = stems.first, let last = stems.last {
                     context.fill(Path(CGRect(x: first, y: 98, width: last - first + 1, height: 3)),
-                                 with: .color(ink))
+                                 with: .color(noteInk))
                     if subdivisions == 4 {
                         context.fill(Path(CGRect(x: first, y: 104, width: last - first + 1, height: 3)),
-                                     with: .color(ink))
+                                     with: .color(noteInk))
                     }
-                    if subdivisions == 3 { label("3", x: 254, y: 87, size: 8) }
+                    if subdivisions == 3 { label("3", x: 254, y: 87, size: 8, tint: noteInk) }
                 }
 
                 var symbol = Path()
@@ -588,7 +672,7 @@ struct HardwareLCD: View {
                 let angle = playing && beatTime > 0 ? direction * cos(phase * .pi) * 0.5 : 0
                 symbol.move(to: CGPoint(x: 19, y: 120))
                 symbol.addLine(to: CGPoint(x: 19 + sin(angle) * 22, y: 120 - cos(angle) * 22))
-                context.stroke(symbol, with: .color(ink), lineWidth: 1.8)
+                context.stroke(symbol, with: .color(pendulumInk), lineWidth: 1.8)
 
                 let count = max(1, beats)
                 let step = CGFloat(186) / CGFloat(count)
@@ -605,8 +689,8 @@ struct HardwareLCD: View {
                     triangle.closeSubpath()
                     let filled = beats == 0
                         ? pulseVisible : (currentBeat >= 0 && index <= currentBeat)
-                    if filled { context.fill(triangle, with: .color(ink)) }
-                    context.stroke(triangle, with: .color(ink), lineWidth: 1.2)
+                    if filled { context.fill(triangle, with: .color(markerInk)) }
+                    context.stroke(triangle, with: .color(markerInk), lineWidth: 1.2)
                 }
             }
         }
@@ -779,7 +863,7 @@ struct ChoiceDropdown: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.system(size: 8, weight: .semibold)).tracking(1)
-                    .foregroundColor(theme == .charcoal ? palette.muted : palette.labelAccent)
+                    .foregroundColor(palette.settingTint(title))
                 HStack(spacing: 6) {
                     Text(selectedLabel)
                         .font(.system(size: 11, weight: .medium))
@@ -788,7 +872,7 @@ struct ChoiceDropdown: View {
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 8, weight: .semibold))
-                        .foregroundColor(theme == .charcoal ? palette.muted : palette.labelAccent)
+                        .foregroundColor(palette.settingTint(title))
                 }
             }
             .padding(.horizontal, 11)
@@ -884,7 +968,7 @@ struct InstrumentView: View {
                         Text("TAP").font(.system(size: 8, weight: .bold))
                             .frame(width: 28, height: 28)
                     }
-                    .buttonStyle(InstrumentButtonStyle(radius: 14))
+                    .buttonStyle(InstrumentButtonStyle(radius: 14, tint: palette.pendulumColor))
                     .help("Tap tempo (T)")
                     .accessibilityLabel("Tap tempo")
 
@@ -907,7 +991,7 @@ struct InstrumentView: View {
                             .font(.system(size: 12, weight: .medium))
                             .frame(width: 28, height: 28)
                     }
-                    .buttonStyle(InstrumentButtonStyle(radius: 14))
+                    .buttonStyle(InstrumentButtonStyle(radius: 14, tint: palette.playColor))
                     .help("Switch to floating mini metronome (Tab or \\)")
                     .accessibilityLabel("Enter widget mode")
                 }
@@ -946,10 +1030,10 @@ struct InstrumentView: View {
         Button { model.toggleMute() } label: {
             Image(systemName: model.volume == 0 ? "speaker.slash.fill" : "speaker.wave.2")
                 .font(.system(size: 17, weight: .medium))
-                .foregroundColor(model.volume == 0 ? palette.accent : palette.foreground)
+                .foregroundColor(model.theme == .charcoal ? (model.volume == 0 ? palette.accent : palette.foreground) : (model.volume == 0 ? palette.gapColor : palette.noteColor))
                 .frame(width: 48, height: 48)
         }
-        .buttonStyle(InstrumentButtonStyle(radius: 24))
+        .buttonStyle(InstrumentButtonStyle(radius: 24, tint: palette.noteColor))
         .help(model.volume == 0 ? "Unmute (M)" : "Mute (M)")
         .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
         .accessibilityValue(model.volume == 0 ? "Muted" : "Volume \(Int(model.volume * 100)) percent")
@@ -961,7 +1045,7 @@ struct InstrumentView: View {
                 .font(.system(size: 16, weight: .medium))
                 .frame(width: 48, height: 48)
         }
-        .buttonStyle(InstrumentButtonStyle(accent: model.playing, radius: 24))
+        .buttonStyle(InstrumentButtonStyle(accent: model.playing, radius: 24, tint: palette.playColor))
         .help(model.playing ? "Stop (Space)" : "Start (Space)")
         .accessibilityLabel(model.playing ? "Stop metronome" : "Start metronome")
     }
@@ -1008,7 +1092,7 @@ struct InstrumentView: View {
                 .rotationEffect(.degrees(delta > 0 ? 0 : 180))
                 .frame(width: 48, height: 48)
         }
-        .buttonStyle(InstrumentButtonStyle(radius: 24))
+        .buttonStyle(InstrumentButtonStyle(radius: 24, tint: palette.beatColor))
         .disabled(atLimit)
         .opacity(atLimit ? 0.4 : 1)
         .help(delta < 0 ? "Decrease beats per bar (Shift + ↓)" : "Increase beats per bar (Shift + ↑)")
@@ -1222,7 +1306,7 @@ struct TempoWidget: View {
                 .frame(width: LCDGeometry.widgetDisplayWidth, height: LCDGeometry.widgetDisplayHeight)
             VStack(spacing: 6) {
                 Circle()
-                    .fill(model.playing ? palette.accent : palette.foreground.opacity(0.18))
+                    .fill(model.playing ? palette.playColor : palette.foreground.opacity(0.18))
                     .frame(width: 9, height: 9)
                     .frame(width: 28, height: 28)
                     .help(model.playing ? "Metronome is playing" : "Metronome is stopped")
