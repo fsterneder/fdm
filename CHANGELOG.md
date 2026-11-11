@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.2
+
+- Keep accented beats solid accent color while current, replacing the two-color split in both views.
+- Preserve current-beat colors on other beats and the widget’s silent-gap half-fills.
+
 ## 0.18.1
 
 - Replace the blended active-accent gradient with a crisp split: accent above, current-beat color below.

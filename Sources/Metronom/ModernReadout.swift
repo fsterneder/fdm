@@ -246,24 +246,14 @@ private struct BeatLights: View {
                     let isCurrent = count == 1 ? pulse : playing && current == index
                     let isPlayed = count > 1 && playing && current >= 0 && index < current
                     let hasAccent = accent && index == 0
-                    let isAccented = hasAccent
-                    let color = isAccented ? palette.action : (isCurrent ? palette.playingBeat : palette.neutral)
-                    // Equal midpoint stops create a crisp horizontal split.
-                    let highlight = LinearGradient(
-                        stops: isAccented && isCurrent
-                            ? [.init(color: palette.action, location: 0),
-                               .init(color: palette.action, location: 0.5),
-                               .init(color: palette.playingBeat, location: 0.5),
-                               .init(color: palette.playingBeat, location: 1)]
-                            : [.init(color: color, location: 0), .init(color: color, location: 1)],
-                        startPoint: .top, endPoint: .bottom)
+                    let color = hasAccent ? palette.action : (isCurrent ? palette.playingBeat : palette.neutral)
                     Circle()
-                        .fill(highlight)
+                        .fill(color)
                         .mask(alignment: hasAccent ? .top : .bottom) {
                             Rectangle().frame(height: silent ? diameter / 2 : diameter)
                         }
                         .opacity(isCurrent || isPlayed ? 1 : 0)
-                        .overlay(Circle().strokeBorder(highlight, lineWidth: min(2.5, max(1.25, diameter * 0.04)))
+                        .overlay(Circle().strokeBorder(color, lineWidth: min(2.5, max(1.25, diameter * 0.04)))
                             .opacity(isCurrent || isPlayed ? 1 : outlineOpacity))
                         .frame(width: diameter, height: diameter)
                         .accessibilityLabel("\(hasAccent ? "Accented beat" : "Beat") \(index + 1) of \(count)")
