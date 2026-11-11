@@ -11,12 +11,14 @@ struct MetronomApp: App {
     @StateObject private var model = Metronome()
     @StateObject private var windows = WindowModes()
     var body: some Scene {
-        Window("fdm-3", id: "instrument") {
+        WindowGroup("fdm-3") {
             InstrumentView(model: model, showWidget: { windows.showWidget() })
                 .background(WindowBridge(windows: windows, model: model))
         }
         .windowResizability(.contentSize)
         .commands {
+            // Keep one instrument window; widget mode uses a companion panel.
+            CommandGroup(replacing: .newItem) {}
             CommandGroup(after: .appInfo) {
                 Button("Start / Stop") { model.toggle() }.keyboardShortcut(.space, modifiers: [])
                 Button("Tap Tempo") { model.tap() }.keyboardShortcut("t", modifiers: [])
@@ -35,7 +37,8 @@ struct MetronomApp: App {
 
 @MainActor
 final class AppLifecycle: NSObject, NSApplicationDelegate {
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    // A hidden instrument is normal in widget mode. Quit only on an explicit close.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 }
 
 @MainActor
@@ -487,7 +490,10 @@ struct InstrumentView: View {
 // This monitor is local to this app and does not require accessibility permission.
 @MainActor
 final class WindowModes: ObservableObject {
-    private weak var mainWindow: NSWindow?
+    // Retain the instrument so it can always be restored after being hidden.
+    private var mainWindow: NSWindow?
+    private enum Mode { case instrument, widget }
+    private var mode: Mode = .instrument
     private weak var model: Metronome?
     private var widget: TempoPanel?
     private var keyMonitor: Any?
@@ -496,6 +502,7 @@ final class WindowModes: ObservableObject {
     func attach(window: NSWindow, model: Metronome) {
         guard mainWindow !== window else { return }
         mainWindow = window
+        window.isReleasedWhenClosed = false
         self.model = model
         // Set the running Dock icon explicitly as well as embedding it for Finder.
         if let url = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
@@ -507,8 +514,9 @@ final class WindowModes: ObservableObject {
             forName: NSWindow.willCloseNotification, object: window, queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                self?.model?.stop()
-                self?.widget?.orderOut(nil)
+                guard let self, self.mode == .instrument else { return }
+                self.model?.stop()
+                self.widget?.orderOut(nil)
                 NSApp.terminate(nil)
             }
         }
@@ -533,7 +541,7 @@ final class WindowModes: ObservableObject {
     }
 
     func toggle() {
-        if widget?.isVisible == true { showInstrument() } else { showWidget() }
+        if mode == .widget { showInstrument() } else { showWidget() }
     }
 
     func showWidget() {
@@ -559,13 +567,17 @@ final class WindowModes: ObservableObject {
             let topLeft = NSPoint(x: mainWindow.frame.minX, y: mainWindow.frame.maxY)
             panel.setFrameTopLeftPoint(topLeft)
         }
-        mainWindow.orderOut(nil)
+        // Show the replacement before hiding the instrument: never leave no visible window.
+        mode = .widget
         widget?.makeKeyAndOrderFront(nil)
+        mainWindow.orderOut(nil)
     }
 
     func showInstrument() {
+        guard let mainWindow else { return }
+        mainWindow.makeKeyAndOrderFront(nil)
+        mode = .instrument
         widget?.orderOut(nil)
-        mainWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 }
