@@ -18,9 +18,9 @@ open dist/fdm.app
 
 ## Controls
 
-- **BPM / subdivision:** drag up/down. Double-click BPM for optional numeric entry.
-- **Right column:** Widget, Settings, Tap, Mute, and Start/Stop.
-- **Settings:** Beats (1–9), Accent, Gap, Gap Length (1–8 bars), Sound, Theme, and volume.
+- **BPM / subdivision / gap:** drag up/down. Gap cycles Off, 1, 2, 4, Random audible bars. Double-click BPM for optional numeric entry.
+- **Right column:** Widget, Settings, Accent, Mute, and Start/Stop.
+- **Settings:** Beats (1–9), Gap Length (1–8 bars), Sound, Theme, volume, and Tap.
 - **Space:** Start/Stop. **T:** tap. **M:** mute.
 - **↑/↓:** tempo ±1. **←/→:** tempo ±10. **Shift + ↑/↓:** beats.
 - **Tab or &#92;:** switch to the floating widget.
@@ -31,7 +31,7 @@ Tempo, sound, accent, and subdivision changes take effect on the next beat. Beat
 
 ## Gap practice
 
-Play 1, 2, or 4 audible bars, then 1–8 silent bars. **Random** chooses a fresh audible run length each cycle. The subdivision slot shows silent bars remaining, such as **2/2 → 1/2**.
+Play 1, 2, or 4 audible bars, then 1–8 silent bars. **Random** chooses a fresh audible run length each cycle. The Gap slot shows silent bars remaining, such as **2/2 → 1/2**.
 
 Existing beat-based gap lengths round up to whole bars. Accent is independent of meter. Closing the main window quits the app.
 

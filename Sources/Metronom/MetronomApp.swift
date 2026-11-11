@@ -236,13 +236,14 @@ enum InstrumentTheme: String, CaseIterable {
     var palette: InstrumentPalette { InstrumentPalette(theme: self) }
 }
 
-// All themes use the same modern six-role color hierarchy.
+// All themes use the same modern theme color hierarchy.
 // The other surfaces, borders, and disabled states derive from these roles.
 private struct ThemeColors {
     let background: UInt32
     let neutral: UInt32
     let tempo: UInt32
     let beat: UInt32
+    let gap: UInt32
     let playingBeat: UInt32
     let action: UInt32
 }
@@ -251,17 +252,17 @@ struct InstrumentPalette {
     let theme: InstrumentTheme
     private var colors: ThemeColors {
         switch theme {
-        case .charcoal: return ThemeColors(background: 0x17191B, neutral: 0xF8F6F0, tempo: 0xF8F6F0, beat: 0xF8F6F0, playingBeat: 0xFF7D40, action: 0xFF7D40)
-        case .dracula: return ThemeColors(background: 0x282A36, neutral: 0xF8F8F2, tempo: 0xBD93F9, beat: 0xFFB86C, playingBeat: 0x8BE9FD, action: 0x50FA7B)
-        case .nord: return ThemeColors(background: 0x2E3440, neutral: 0xECEFF4, tempo: 0x88C0D0, beat: 0xB48EAD, playingBeat: 0x8FBCBB, action: 0xA3BE8C)
-        case .gruvbox: return ThemeColors(background: 0x282828, neutral: 0xEBDBB2, tempo: 0xFABD2F, beat: 0xFE8019, playingBeat: 0x8EC07C, action: 0xB8BB26)
-        case .githubLight: return ThemeColors(background: 0xFFFFFF, neutral: 0x24292F, tempo: 0x0969DA, beat: 0x953800, playingBeat: 0x8250DF, action: 0x1A7F37)
-        case .monokai: return ThemeColors(background: 0x272822, neutral: 0xF8F8F2, tempo: 0xAE81FF, beat: 0xFD971F, playingBeat: 0x66D9EF, action: 0xA6E22E)
-        case .solarizedLight: return ThemeColors(background: 0xFDF6E3, neutral: 0x586E75, tempo: 0x268BD2, beat: 0xCB4B16, playingBeat: 0x6C71C4, action: 0x168A81)
-        case .desert: return ThemeColors(background: 0x333333, neutral: 0xFFFFFF, tempo: 0xFFA0A0, beat: 0xF0E68C, playingBeat: 0x98FB98, action: 0x87CEEB)
-        case .paperColorLight: return ThemeColors(background: 0xEEEEEE, neutral: 0x444444, tempo: 0x005F87, beat: 0xAF0000, playingBeat: 0x008787, action: 0x5F8700)
-        case .peachpuff: return ThemeColors(background: 0xFFDAB9, neutral: 0x000000, tempo: 0xA52A2A, beat: 0xC00058, playingBeat: 0x008080, action: 0x2E6F40)
-        case .tokyoNight: return ThemeColors(background: 0x1A1B26, neutral: 0xC0CAF5, tempo: 0xFF9E64, beat: 0x7AA2F7, playingBeat: 0x7DCFFF, action: 0x9ECE6A)
+        case .charcoal: return ThemeColors(background: 0x17191B, neutral: 0xF8F6F0, tempo: 0xF8F6F0, beat: 0xF8F6F0, gap: 0xF8F6F0, playingBeat: 0xFF7D40, action: 0xFF7D40)
+        case .dracula: return ThemeColors(background: 0x282A36, neutral: 0xF8F8F2, tempo: 0xBD93F9, beat: 0xFFB86C, gap: 0xFF79C6, playingBeat: 0x8BE9FD, action: 0x50FA7B)
+        case .nord: return ThemeColors(background: 0x2E3440, neutral: 0xECEFF4, tempo: 0x88C0D0, beat: 0xB48EAD, gap: 0xEBCB8B, playingBeat: 0x8FBCBB, action: 0xA3BE8C)
+        case .gruvbox: return ThemeColors(background: 0x282828, neutral: 0xEBDBB2, tempo: 0xFABD2F, beat: 0xFE8019, gap: 0xD3869B, playingBeat: 0x8EC07C, action: 0xB8BB26)
+        case .githubLight: return ThemeColors(background: 0xFFFFFF, neutral: 0x24292F, tempo: 0x0969DA, beat: 0x953800, gap: 0xBF3989, playingBeat: 0x8250DF, action: 0x1A7F37)
+        case .monokai: return ThemeColors(background: 0x272822, neutral: 0xF8F8F2, tempo: 0xAE81FF, beat: 0xFD971F, gap: 0xF92672, playingBeat: 0x66D9EF, action: 0xA6E22E)
+        case .solarizedLight: return ThemeColors(background: 0xFDF6E3, neutral: 0x586E75, tempo: 0x268BD2, beat: 0xCB4B16, gap: 0xD33682, playingBeat: 0x6C71C4, action: 0x168A81)
+        case .desert: return ThemeColors(background: 0x333333, neutral: 0xFFFFFF, tempo: 0xFFA0A0, beat: 0xF0E68C, gap: 0xDDA0DD, playingBeat: 0x98FB98, action: 0x87CEEB)
+        case .paperColorLight: return ThemeColors(background: 0xEEEEEE, neutral: 0x444444, tempo: 0x005F87, beat: 0xAF0000, gap: 0x875FAF, playingBeat: 0x008787, action: 0x5F8700)
+        case .peachpuff: return ThemeColors(background: 0xFFDAB9, neutral: 0x000000, tempo: 0xA52A2A, beat: 0xC00058, gap: 0x6A5ACD, playingBeat: 0x008080, action: 0x2E6F40)
+        case .tokyoNight: return ThemeColors(background: 0x1A1B26, neutral: 0xC0CAF5, tempo: 0xFF9E64, beat: 0x7AA2F7, gap: 0xBB9AF7, playingBeat: 0x7DCFFF, action: 0x9ECE6A)
         }
     }
     private func color(_ hex: UInt32) -> Color {
@@ -273,6 +274,7 @@ struct InstrumentPalette {
     var neutral: Color { color(colors.neutral) }
     var tempo: Color { color(colors.tempo) }
     var beat: Color { color(colors.beat) }
+    var gap: Color { color(colors.gap) }
     var playingBeat: Color { color(colors.playingBeat) }
     var action: Color { color(colors.action) }
     private func surface(_ amount: Double) -> Color {
@@ -591,12 +593,20 @@ struct InstrumentView: View {
                     .environment(\.instrumentTheme, model.theme)
                     .preferredColorScheme(model.theme.colorScheme)
             }
-            Button { model.tap() } label: {
-                Text("TAP").font(.system(size: 11, weight: .semibold))
+            Button { model.accent.toggle() } label: {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(palette.neutral.opacity(model.accent ? 1 : 0.45))
                     .frame(width: 36, height: 32).contentShape(Rectangle())
+                    .overlay(alignment: .trailing) {
+                        Circle().fill(model.accent ? palette.action : Color.clear)
+                            .frame(width: 4, height: 4).padding(.trailing, 1)
+                    }
             }
-            .buttonStyle(.plain).foregroundColor(palette.neutral)
-            .help("Tap tempo (T)").accessibilityLabel("Tap tempo")
+            .buttonStyle(.plain)
+            .help(model.accent ? "Turn first-beat accent off" : "Turn first-beat accent on")
+            .accessibilityLabel("First-beat accent")
+            .accessibilityValue(model.accent ? "On" : "Off")
             Button { model.toggleMute() } label: {
                 Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
                     .font(.system(size: 17)).frame(width: 36, height: 32)
@@ -629,10 +639,6 @@ struct InstrumentSettings: View {
             VStack(spacing: 8) {
                 HStack(spacing: 8) {
                     beatSelector
-                    gapSelector
-                }
-                HStack(spacing: 8) {
-                    accentSelector
                     gapBarsSelector
                 }
                 HStack(spacing: 8) {
@@ -652,6 +658,12 @@ struct InstrumentSettings: View {
                 .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
                 Slider(value: $model.volume, in: 0...1)
                     .tint(palette.action).controlSize(.small).accessibilityLabel("Volume")
+                Button { model.tap() } label: {
+                    Text("TAP").font(.system(size: 11, weight: .semibold))
+                        .frame(width: 36, height: 28).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).foregroundColor(palette.neutral)
+                .help("Tap tempo (T)").accessibilityLabel("Tap tempo")
             }
         }
         .padding(16).frame(width: 300)
@@ -674,17 +686,6 @@ struct InstrumentSettings: View {
     }
 
 
-    private var accentSelector: some View {
-        ChoiceDropdown(
-            title: "ACCENT", selectedID: model.accent ? "yes" : "no",
-            selectedLabel: model.accent ? "Yes" : "No",
-            options: [DropdownChoice(id: "yes", label: "Yes"), DropdownChoice(id: "no", label: "No")]
-        ) { id in
-            let value = id == "yes"
-            if model.accent != value { model.accent = value }
-        }
-    }
-
     private var gapBarsSelector: some View {
         ChoiceDropdown(
             title: "GAP LENGTH", selectedID: String(model.gapBars),
@@ -696,18 +697,6 @@ struct InstrumentSettings: View {
             if let length = Int(id), GapCycle.lengthOptions.contains(length), model.gapBars != length {
                 model.gapBars = length
             }
-        }
-    }
-
-    private var gapSelector: some View {
-        ChoiceDropdown(
-            title: "GAP", selectedID: String(model.gap),
-            selectedLabel: GapCycle.label(for: model.gap),
-            options: GapCycle.options.map {
-                DropdownChoice(id: String($0), label: GapCycle.label(for: $0))
-            }
-        ) { id in
-            if let gap = Int(id), GapCycle.options.contains(gap) { model.gap = gap }
         }
     }
 

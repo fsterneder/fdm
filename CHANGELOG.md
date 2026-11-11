@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.0
+
+- Add a third main metric for Gap, draggable through Off, 1, 2, 4, and Random audible bars.
+- Use a palette-specific Gap accent; show the silent-bar countdown in its own slot.
+- Replace Tap in the right control column with a first-beat Accent toggle.
+- Move Tap beside Volume in Settings; keep Beats and Gap Length in Settings.
+
 ## 0.14.0
 
 - Keep the audio clock running when tempo, sound, accent, or subdivision changes; apply edits on the next beat.

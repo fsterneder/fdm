@@ -3,7 +3,7 @@ import AppKit
 import TempoCore
 
 enum DisplayGeometry {
-    static let width: CGFloat = 392
+    static let width: CGFloat = 468
     static let mainHeight: CGFloat = 208
     static let widgetWidth: CGFloat = 244
     static let widgetHeight: CGFloat = 40
@@ -21,44 +21,85 @@ struct ModernReadout: View {
         default: return "1/4"
         }
     }
+    private var gapIndex: Int { GapCycle.options.firstIndex(of: model.gap) ?? 0 }
+    private var gapText: String {
+        if model.inSilentBar { return "\(model.gapBarsRemaining)/\(model.playbackGapBars)" }
+        if model.gap == 0 { return "Off" }
+        if model.gap == GapCycle.random { return "Rnd" }
+        return String(model.gap)
+    }
+    private var gapDescription: String {
+        if model.gap == 0 { return "Gap off" }
+        if model.gap == GapCycle.random { return "Randomly choose 1, 2, or 4 audible bars before silence" }
+        return "\(model.gap) audible \(model.gap == 1 ? "bar" : "bars") before silence"
+    }
+    private func setGap(index: Int) {
+        let bounded = min(GapCycle.options.count - 1, max(0, index))
+        let value = GapCycle.options[bounded]
+        if model.gap != value { model.gap = value }
+    }
     var body: some View {
         GeometryReader { geometry in
             let scale = min(geometry.size.width / DisplayGeometry.width,
                             geometry.size.height / DisplayGeometry.mainHeight)
+            let column = DisplayGeometry.width / 3 * scale
             VStack(spacing: 28 * scale) {
                 HStack(spacing: 0) {
                     VStack(spacing: 2 * scale) {
-                        TempoValue(model: model, fontSize: 76 * scale, width: 196 * scale, height: 94 * scale)
+                        TempoValue(model: model, fontSize: 68 * scale, width: column, height: 94 * scale)
                         caption("BPM", scale: scale)
                     }
-                    .frame(width: 196 * scale)
+                    .frame(width: column)
                     VStack(spacing: 2 * scale) {
-                        Text(model.inSilentBar ? "\(model.gapBarsRemaining)/\(model.playbackGapBars)" : subdivisionText)
-                            .font(.system(size: (model.inSilentBar ? 54 : 60) * scale, weight: .regular))
-                            .monospacedDigit()
-                            .foregroundColor(model.inSilentBar ? palette.neutral : palette.beat)
+                        Text(subdivisionText)
+                            .font(.system(size: 52 * scale, weight: .regular))
+                            .monospacedDigit().foregroundColor(palette.beat)
                             .minimumScaleFactor(0.6).lineLimit(1)
-                            .frame(width: 188 * scale, height: 94 * scale)
-                        caption(model.inSilentBar ? "SILENT BARS" : "SUBDIVISION", scale: scale)
+                            .frame(width: column - 8 * scale, height: 94 * scale)
+                        caption("SUBDIVISION", scale: scale)
                     }
-                    .frame(width: 196 * scale)
+                    .frame(width: column)
                     .overlay {
                         ValueDragArea(value: model.subdivisions, bounds: 1...4, pointsPerStep: 12,
                             onSet: { value in
                                 if model.subdivisions != value { model.subdivisions = value }
                             }, onDoubleClick: nil, onDragState: { model.editingTempo = $0 })
-                            .frame(width: 196 * scale, height: 112 * scale)
+                            .frame(width: column, height: 112 * scale)
                             .accessibilityHidden(true)
                     }
                     .help("Drag up/down to change subdivision.")
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(model.inSilentBar ? "Silent bars remaining" : "Subdivision")
-                    .accessibilityValue(model.inSilentBar ? "\(model.gapBarsRemaining) of \(model.playbackGapBars) bars remaining" : "\(model.subdivisions) clicks per beat")
+                    .accessibilityLabel("Subdivision")
+                    .accessibilityValue("\(model.subdivisions) clicks per beat")
+                    VStack(spacing: 2 * scale) {
+                        Text(gapText)
+                            .font(.system(size: 52 * scale, weight: .regular))
+                            .monospacedDigit().foregroundColor(palette.gap)
+                            .minimumScaleFactor(0.6).lineLimit(1)
+                            .frame(width: column - 8 * scale, height: 94 * scale)
+                        caption(model.inSilentBar ? "SILENT" : "GAP", scale: scale)
+                    }
+                    .frame(width: column)
+                    .overlay {
+                        ValueDragArea(value: gapIndex, bounds: 0...(GapCycle.options.count - 1), pointsPerStep: 12,
+                            onSet: { setGap(index: $0) }, onDoubleClick: nil,
+                            onDragState: { model.editingTempo = $0 })
+                            .frame(width: column, height: 112 * scale)
+                            .accessibilityHidden(true)
+                    }
+                    .help("\(gapDescription). Drag up/down: Off, 1, 2, 4, Random.")
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(model.inSilentBar ? "Silent bars remaining; gap setting" : "Gap")
+                    .accessibilityValue(model.inSilentBar
+                        ? "\(model.gapBarsRemaining) of \(model.playbackGapBars) silent bars remaining. \(gapDescription)"
+                        : gapDescription)
+                    .accessibilityAdjustableAction { direction in
+                        setGap(index: gapIndex + (direction == .increment ? 1 : -1))
+                    }
                 }
                 .frame(height: 112 * scale)
                 BeatLights(model: model, width: DisplayGeometry.width * scale, maxDiameter: 68 * scale, spacing: 24 * scale)
                     .frame(height: 68 * scale)
-
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .center)
         }
