@@ -77,7 +77,7 @@ final class Metronome: ObservableObject {
         bpm = Tempo.clamp(defaults.integer(forKey: "bpm"))
         beats = min(9, max(0, defaults.integer(forKey: "beats")))
         subdivisions = min(4, max(1, defaults.integer(forKey: "subdivisions")))
-        sound = min(2, max(0, defaults.integer(forKey: "sound")))
+        sound = min(ClickVoice.allCases.count - 1, max(0, defaults.integer(forKey: "sound")))
         volume = min(1, max(0, defaults.double(forKey: "volume")))
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: format)
@@ -143,18 +143,13 @@ final class Metronome: ObservableObject {
         }
     }
     private func makeClick(kind: Int) -> AVAudioPCMBuffer {
-        let count = AVAudioFrameCount(0.025 * format.sampleRate)
+        let voice = ClickVoice(rawValue: sound) ?? .click
+        let samples = voice.samples(kind: kind, sampleRate: format.sampleRate)
+        let count = AVAudioFrameCount(samples.count)
         let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: count)!
         buffer.frameLength = count
-        let frequency: Double = [1800, 1100, 750][kind] * [1.0, 0.62, 1.5][sound]
-        let gain: Double = [0.8, 0.55, 0.26][kind]
-        for index in 0..<Int(count) {
-            let t = Double(index) / format.sampleRate
-            let attack = min(1, t / 0.0008)
-            let decay = exp(-t * (sound == 1 ? 230 : 160))
-            let fundamental = sin(2 * .pi * frequency * t)
-            let overtone = sound == 1 ? 0.45 * sin(2 * .pi * frequency * 2.7 * t) : 0
-            buffer.floatChannelData![0][index] = Float((fundamental + overtone) * attack * decay * gain)
+        samples.withUnsafeBufferPointer { source in
+            buffer.floatChannelData![0].update(from: source.baseAddress!, count: samples.count)
         }
         return buffer
     }
@@ -441,17 +436,9 @@ struct InstrumentView: View {
                     SettingMenu(title: "BEATS", value: $model.beats, values: Array(0...9))
                     SettingMenu(title: "DIVISION", value: $model.subdivisions, values: Array(1...4))
                 }
-                HStack(spacing: 4) {
-                    ForEach(0..<3, id: \.self) { index in
-                        Button { model.sound = index } label: {
-                            Text(["Click", "Wood", "Bright"][index])
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(model.sound == index ? .white.opacity(0.92) : Finish.muted)
-                                .frame(maxWidth: .infinity).frame(height: 29)
-                                .background(model.sound == index ? Color.white.opacity(0.10) : .clear,
-                                            in: RoundedRectangle(cornerRadius: 7))
-                        }.buttonStyle(.plain)
-                    }
+                VStack(spacing: 4) {
+                    soundRow(Array(ClickVoice.allCases.prefix(3)))
+                    soundRow(Array(ClickVoice.allCases.suffix(2)))
                 }
                 .padding(3).background(Finish.ink.opacity(0.65), in: RoundedRectangle(cornerRadius: 10))
                 HStack(spacing: 10) {
@@ -473,6 +460,24 @@ struct InstrumentView: View {
         )) {
             Button("OK") { model.error = nil }
         } message: { Text(model.error ?? "") }
+    }
+
+    private func soundRow(_ voices: [ClickVoice]) -> some View {
+        HStack(spacing: 4) {
+            ForEach(voices, id: \.rawValue) { voice in
+                Button { model.sound = voice.rawValue } label: {
+                    Text(voice.name)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(model.sound == voice.rawValue ? .white.opacity(0.92) : Finish.muted)
+                        .frame(maxWidth: .infinity).frame(height: 29)
+                        .background(model.sound == voice.rawValue ? Color.white.opacity(0.10) : .clear,
+                                    in: RoundedRectangle(cornerRadius: 7))
+                }
+                .buttonStyle(.plain)
+                .accessibilityValue(model.sound == voice.rawValue ? "Selected" : "")
+                .help("Voice \(voice.rawValue + 1): \(voice.name)")
+            }
+        }
     }
 
     private func stepButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
