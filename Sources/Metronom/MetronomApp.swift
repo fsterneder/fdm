@@ -485,34 +485,57 @@ private enum LCDSegments {
     }
 }
 
+private enum LCDGeometry {
+    static let size = CGSize(width: 280, height: 132)
+    static let mainHeight: CGFloat = 284 * size.height / size.width
+    static let widgetDisplayWidth: CGFloat = 168
+    static let widgetDisplayHeight = widgetDisplayWidth * size.height / size.width
+    static let widgetWidth = widgetDisplayWidth + 56 // padding, control strip, and gap
+    static let widgetHeight = widgetDisplayHeight + 16
+}
+
 @MainActor
 struct HardwareLCD: View {
     @ObservedObject var model: Metronome
     @State private var editingTempo = false
-    var compact = false
     var body: some View {
-        // Read UI-isolated state here; Canvas and its local helpers only use snapshots.
+        // Capture UI state before entering the drawing closures.
         let theme = model.theme
         let palette = theme.palette
         let ink = theme == .charcoal ? Color(red: 0.08, green: 0.12, blue: 0.095) : palette.lcdDigitColor
         let bpm = model.bpm
         let subdivisions = model.subdivisions
         let beats = model.beats
-        let sound = model.sound
         let playing = model.playing
         let currentBeat = model.currentBeat
         let beatTime = model.beatTime
         let beatNumber = model.beatNumber
         let inSilentBar = model.inSilentBar
-        let compact = self.compact
         let hideTempoDigits = editingTempo
+        let logical = LCDGeometry.size
+
         return TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !playing)) { timeline in
             Canvas { context, size in
-                let logical = compact ? CGSize(width: 140, height: 66) : CGSize(width: 280, height: 154)
-                context.scaleBy(x: size.width / logical.width, y: size.height / logical.height)
+                // The same coordinate system, including glass, border, and symbols,
+                // is uniformly scaled in the instrument and floating widget.
+                let scale = min(size.width / logical.width, size.height / logical.height)
+                context.translateBy(x: (size.width - logical.width * scale) / 2,
+                                    y: (size.height - logical.height * scale) / 2)
+                context.scaleBy(x: scale, y: scale)
+                let rect = CGRect(origin: .zero, size: logical)
+                let glass = Path(roundedRect: rect, cornerRadius: 9)
+                context.fill(glass, with: .linearGradient(
+                    Gradient(colors: palette.lcdGlass), startPoint: .zero,
+                    endPoint: CGPoint(x: logical.width, y: logical.height)
+                ))
+                let border = Path(roundedRect: rect.insetBy(dx: 1, dy: 1), cornerRadius: 8)
+                context.stroke(border, with: .color(theme == .charcoal ? .black.opacity(0.65) : palette.fieldBorder),
+                               lineWidth: 2)
+
                 func label(_ text: String, x: CGFloat, y: CGFloat, size: CGFloat = 10) {
                     context.draw(Text(text).font(.system(size: size, weight: .medium))
-                        .foregroundColor(theme == .charcoal ? ink : palette.foreground), at: CGPoint(x: x, y: y), anchor: .topLeading)
+                        .foregroundColor(theme == .charcoal ? ink : palette.foreground),
+                        at: CGPoint(x: x, y: y), anchor: .topLeading)
                 }
                 func number(_ value: Int, places: Int, x: CGFloat, y: CGFloat, height: CGFloat) {
                     let chars = Array(String(value))
@@ -526,95 +549,77 @@ struct HardwareLCD: View {
                         }
                     }
                 }
-                if compact {
-                    if !hideTempoDigits { number(bpm, places: 3, x: 9, y: 7, height: 38) }
-                    label(inSilentBar ? "GAP" : "TEMPO", x: 87, y: 32, size: 7)
-                } else {
-                    if !hideTempoDigits { number(bpm, places: 3, x: 65, y: 16, height: 64) }
-                    number(beats, places: 1, x: 235, y: 16, height: 64)
-                    label("TEMPO", x: 9, y: 67, size: 11)
-                    label("BEAT", x: 194, y: 67, size: 11)
-                    label("VOICE", x: 47, y: 105, size: 10)
-                    if inSilentBar { label("GAP", x: 196, y: 105, size: 10) }
-                    number(sound + 1, places: 1, x: 101, y: 93, height: 29)
-                    // Monochrome rhythm mark in the lower-right LCD corner.
-                    let stems: [CGFloat] = subdivisions == 1 ? [259] : (subdivisions == 3 ? [246, 257, 268] : [248, 268])
-                    for x in stems {
-                        let head = Path(ellipseIn: CGRect(x: x - 7, y: 137, width: 8, height: 5))
-                        context.fill(head, with: .color(ink))
-                        var stem = Path()
-                        stem.move(to: CGPoint(x: x, y: 139))
-                        stem.addLine(to: CGPoint(x: x, y: 117))
-                        context.stroke(stem, with: .color(ink), lineWidth: 1.7)
-                    }
-                    if subdivisions > 1, let first = stems.first, let last = stems.last {
-                        context.fill(Path(CGRect(x: first, y: 116, width: last - first + 1, height: 3)), with: .color(ink))
-                        if subdivisions == 4 {
-                            context.fill(Path(CGRect(x: first, y: 122, width: last - first + 1, height: 3)), with: .color(ink))
-                        }
-                        if subdivisions == 3 { label("3", x: 254, y: 105, size: 8) }
-                    }
-                    // The pendulum changes direction on every audible pulse, including unaccented mode.
-                    var symbol = Path()
-                    symbol.move(to: CGPoint(x: 11, y: 115))
-                    symbol.addLine(to: CGPoint(x: 15, y: 97))
-                    symbol.addLine(to: CGPoint(x: 23, y: 97))
-                    symbol.addLine(to: CGPoint(x: 27, y: 115))
-                    symbol.closeSubpath()
-                    let elapsed = max(0, timeline.date.timeIntervalSinceReferenceDate - beatTime)
-                    let phase = min(1, elapsed / (60 / Double(bpm)))
-                    let direction: Double = beatNumber.isMultiple(of: 2) ? -1 : 1
-                    let angle = playing && beatTime > 0
-                        ? direction * cos(phase * .pi) * 0.5 : 0
-                    symbol.move(to: CGPoint(x: 19, y: 112))
-                    symbol.addLine(to: CGPoint(x: 19 + sin(angle) * 21, y: 112 - cos(angle) * 21))
-                    context.stroke(symbol, with: .color(ink), lineWidth: 1.8)
+
+                if !hideTempoDigits { number(bpm, places: 3, x: 65, y: 16, height: 64) }
+                number(beats, places: 1, x: 235, y: 16, height: 64)
+                label("TEMPO", x: 9, y: 67, size: 11)
+                label("BEAT", x: 194, y: 67, size: 11)
+                if inSilentBar { label("GAP", x: 194, y: 87, size: 10) }
+
+                // Subdivision notation shares the bottom baseline with beat markers.
+                let stems: [CGFloat] = subdivisions == 1 ? [259] : (subdivisions == 3 ? [246, 257, 268] : [248, 268])
+                for x in stems {
+                    context.fill(Path(ellipseIn: CGRect(x: x - 7, y: 119, width: 8, height: 5)),
+                                 with: .color(ink))
+                    var stem = Path()
+                    stem.move(to: CGPoint(x: x, y: 121))
+                    stem.addLine(to: CGPoint(x: x, y: 99))
+                    context.stroke(stem, with: .color(ink), lineWidth: 1.7)
                 }
+                if subdivisions > 1, let first = stems.first, let last = stems.last {
+                    context.fill(Path(CGRect(x: first, y: 98, width: last - first + 1, height: 3)),
+                                 with: .color(ink))
+                    if subdivisions == 4 {
+                        context.fill(Path(CGRect(x: first, y: 104, width: last - first + 1, height: 3)),
+                                     with: .color(ink))
+                    }
+                    if subdivisions == 3 { label("3", x: 254, y: 87, size: 8) }
+                }
+
+                var symbol = Path()
+                symbol.move(to: CGPoint(x: 11, y: 124))
+                symbol.addLine(to: CGPoint(x: 15, y: 104))
+                symbol.addLine(to: CGPoint(x: 23, y: 104))
+                symbol.addLine(to: CGPoint(x: 27, y: 124))
+                symbol.closeSubpath()
+                let elapsed = max(0, timeline.date.timeIntervalSinceReferenceDate - beatTime)
+                let phase = min(1, elapsed / (60 / Double(bpm)))
+                let direction: Double = beatNumber.isMultiple(of: 2) ? -1 : 1
+                let angle = playing && beatTime > 0 ? direction * cos(phase * .pi) * 0.5 : 0
+                symbol.move(to: CGPoint(x: 19, y: 120))
+                symbol.addLine(to: CGPoint(x: 19 + sin(angle) * 22, y: 120 - cos(angle) * 22))
+                context.stroke(symbol, with: .color(ink), lineWidth: 1.8)
+
                 let count = max(1, beats)
-                // With no accent the beat index is always zero, so show each pulse
-                // by briefly filling the marker instead of leaving it permanently filled.
+                let step = CGFloat(186) / CGFloat(count)
+                let markerWidth = min(CGFloat(18), step - 4)
                 let timeSinceBeat = max(0, timeline.date.timeIntervalSinceReferenceDate - beatTime)
                 let pulseDuration = min(0.14, (60 / Double(bpm)) * 0.45)
-                let pulseVisible = playing && currentBeat >= 0
-                    && timeSinceBeat < pulseDuration
-                let width: CGFloat = compact ? 9 : 18
-                let height: CGFloat = compact ? 9 : 19
-                let spacing: CGFloat = compact ? 4 : 7
-                let y: CGFloat = compact ? 52 : 127
+                let pulseVisible = playing && currentBeat >= 0 && timeSinceBeat < pulseDuration
                 for index in 0..<count {
-                    let x = CGFloat(index) * (width + spacing) + (compact ? 11 : 10)
+                    let x = 43 + CGFloat(index) * step + (step - markerWidth) / 2
                     var triangle = Path()
-                    triangle.move(to: CGPoint(x: x, y: y))
-                    triangle.addLine(to: CGPoint(x: x + width, y: y + height / 2))
-                    triangle.addLine(to: CGPoint(x: x, y: y + height))
+                    triangle.move(to: CGPoint(x: x, y: 108))
+                    triangle.addLine(to: CGPoint(x: x + markerWidth, y: 116))
+                    triangle.addLine(to: CGPoint(x: x, y: 124))
                     triangle.closeSubpath()
-                    // Accented bars progress across markers; unaccented pulses flash.
                     let filled = beats == 0
                         ? pulseVisible : (currentBeat >= 0 && index <= currentBeat)
-                    if filled {
-                        context.fill(triangle, with: .color(ink))
-                    }
-                    context.stroke(triangle, with: .color(ink), lineWidth: compact ? 0.8 : 1.2)
+                    if filled { context.fill(triangle, with: .color(ink)) }
+                    context.stroke(triangle, with: .color(ink), lineWidth: 1.2)
                 }
             }
-            }
-        .background(
-            LinearGradient(colors: palette.lcdGlass, startPoint: .topLeading, endPoint: .bottomTrailing),
-            in: RoundedRectangle(cornerRadius: compact ? 5 : 9)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: compact ? 5 : 9))
-        .overlay(RoundedRectangle(cornerRadius: compact ? 5 : 9)
-            .strokeBorder(theme == .charcoal ? .black.opacity(0.65) : palette.fieldBorder, lineWidth: compact ? 1 : 2))
+        }
         .overlay {
             GeometryReader { geometry in
-                let logical = compact ? CGSize(width: 140, height: 66) : CGSize(width: 280, height: 154)
-                let target = compact ? CGRect(x: 5, y: 4, width: 78, height: 44)
-                    : CGRect(x: 60, y: 10, width: 125, height: 76)
+                let scale = min(geometry.size.width / logical.width, geometry.size.height / logical.height)
+                let offset = CGPoint(x: (geometry.size.width - logical.width * scale) / 2,
+                                     y: (geometry.size.height - logical.height * scale) / 2)
+                let target = CGRect(x: 60, y: 10, width: 125, height: 76)
                 Group {
                     if editingTempo {
                         InlineTempoField(
-                            bpm: bpm, color: ink,
-                            fontSize: (compact ? 38 : 64) * geometry.size.height / logical.height,
+                            bpm: bpm, color: ink, fontSize: 64 * scale,
                             onSet: { value in
                                 model.bpm = value
                                 editingTempo = false
@@ -638,16 +643,14 @@ struct HardwareLCD: View {
                         .accessibilityValue("\(bpm) beats per minute")
                     }
                 }
-                .frame(width: target.width * geometry.size.width / logical.width,
-                       height: target.height * geometry.size.height / logical.height)
-                .position(x: target.midX * geometry.size.width / logical.width,
-                          y: target.midY * geometry.size.height / logical.height)
+                .frame(width: target.width * scale, height: target.height * scale)
+                .position(x: offset.x + target.midX * scale, y: offset.y + target.midY * scale)
             }
         }
         .onDisappear { model.editingTempo = false }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("LCD")
-        .accessibilityValue("\(bpm) beats per minute, \(beats == 0 ? "no accent" : "\(beats) beats per bar"), voice \(sound + 1), \(playing ? (inSilentBar ? "silent practice bar" : "playing") : "stopped")")
+        .accessibilityValue("\(bpm) beats per minute, \(beats == 0 ? "no accent" : "\(beats) beats per bar"), \(subdivisions) clicks per beat, \(playing ? (inSilentBar ? "silent practice bar" : "playing") : "stopped")")
     }
 }
 
@@ -910,7 +913,7 @@ struct InstrumentView: View {
                 }
             }
 
-            HardwareLCD(model: model).frame(height: 154)
+            HardwareLCD(model: model).frame(height: LCDGeometry.mainHeight)
 
             HStack(spacing: 20) {
                 tempoDial
@@ -1168,7 +1171,7 @@ final class WindowModes: ObservableObject {
         guard let model, let mainWindow else { return }
         if widget == nil {
             let panel = TempoPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 196, height: 82),
+                contentRect: NSRect(x: 0, y: 0, width: LCDGeometry.widgetWidth, height: LCDGeometry.widgetHeight),
                 styleMask: [.borderless], backing: .buffered, defer: false
             )
             panel.title = "fdm-3 Tempo"
@@ -1215,8 +1218,8 @@ struct TempoWidget: View {
     var showInstrument: () -> Void
     var body: some View {
         HStack(spacing: 8) {
-            HardwareLCD(model: model, compact: true).frame(width: 140, height: 66)
-            Spacer(minLength: 0)
+            HardwareLCD(model: model)
+                .frame(width: LCDGeometry.widgetDisplayWidth, height: LCDGeometry.widgetDisplayHeight)
             VStack(spacing: 6) {
                 Circle()
                     .fill(model.playing ? palette.accent : palette.foreground.opacity(0.18))
@@ -1236,7 +1239,7 @@ struct TempoWidget: View {
                 .accessibilityLabel("Return to full fdm-3 window")
             }
         }
-        .padding(.horizontal, 10).frame(width: 196, height: 82)
+        .padding(.horizontal, 10).frame(width: LCDGeometry.widgetWidth, height: LCDGeometry.widgetHeight)
         .background(LinearGradient(colors: palette.bodyColors,
                                   startPoint: .topLeading, endPoint: .bottomTrailing),
                     in: RoundedRectangle(cornerRadius: 13))

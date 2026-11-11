@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0
+
+- Use one proportionally scaled LCD layout in both the main window and widget.
+- Remove Voice from the LCD and its accessibility description.
+- Include beat count, pendulum, subdivision note, and gap status in the widget.
+- Align the bottom-row symbols and reduce the LCD height.
+- Enlarge the widget slightly while keeping its controls outside the LCD.
+
 ## 0.6.0
 
 - Compact the main window to its header, LCD, wheel, and four round controls.
