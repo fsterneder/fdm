@@ -382,12 +382,12 @@ struct InstrumentView: View {
                 }
                 Spacer()
                 Button(action: showWidget) {
-                    Image(systemName: "pip.enter")
-                        .font(.system(size: 12, weight: .medium))
-                        .frame(width: 30, height: 28)
+                    Label("Mini", systemImage: "pip")
+                        .font(.system(size: 11, weight: .medium))
+                        .padding(.horizontal, 9).frame(height: 28)
                 }
                 .buttonStyle(InstrumentButtonStyle(radius: 8))
-                .help("Widget mode (⇧⌘M)")
+                .help("Switch to floating mini metronome (⇧⌘M)")
                 .accessibilityLabel("Enter widget mode")
             }
             HardwareLCD(model: model).frame(height: 154)
@@ -624,14 +624,25 @@ struct TempoWidget: View {
         HStack(spacing: 8) {
             HardwareLCD(model: model, compact: true).frame(width: 140, height: 66)
             Spacer(minLength: 0)
-            Button(action: showInstrument) {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 11, weight: .medium))
-                    .frame(width: 28, height: 32)
+            VStack(spacing: 6) {
+                Button { model.toggle() } label: {
+                    Image(systemName: model.playing ? "stop.fill" : "play.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(InstrumentButtonStyle(accent: model.playing, radius: 8))
+                .help(model.playing ? "Stop (Space)" : "Start (Space)")
+                .accessibilityLabel(model.playing ? "Stop metronome" : "Start metronome")
+
+                Button(action: showInstrument) {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 11, weight: .medium))
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(InstrumentButtonStyle(radius: 8))
+                .help("Return to fdm-3 (⇧⌘M)")
+                .accessibilityLabel("Return to full fdm-3 window")
             }
-            .buttonStyle(InstrumentButtonStyle(radius: 8))
-            .help("Return to fdm-3 (⇧⌘M)")
-            .accessibilityLabel("Return to full fdm-3 window")
         }
         .padding(.horizontal, 10).frame(width: 196, height: 82)
         .background(LinearGradient(colors: [Finish.panel, Finish.ink],
