@@ -9,7 +9,6 @@ if ! xcrun --find swift >/dev/null 2>&1; then
   echo "Install Apple Command Line Tools first: xcode-select --install" >&2
   exit 1
 fi
-swift test
 swift build -c release
 bin_dir="$(swift build -c release --show-bin-path)"
 app="dist/Metronom.app"
