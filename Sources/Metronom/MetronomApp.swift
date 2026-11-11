@@ -182,7 +182,7 @@ final class Metronome: ObservableObject {
 }
 
 enum InstrumentTheme: String, CaseIterable {
-    case charcoal, dracula, nord, gruvbox, githubLight, monokai, solarizedDark, solarizedLight
+    case charcoal, dracula, nord, gruvbox, githubLight, monokai, solarizedLight, desert, paperColorLight, peachpuff, tokyoNight
     var name: String {
         switch self {
         case .charcoal: return "Default"
@@ -191,8 +191,11 @@ enum InstrumentTheme: String, CaseIterable {
         case .gruvbox: return "Gruvbox"
         case .githubLight: return "GitHub Light"
         case .monokai: return "Monokai"
-        case .solarizedDark: return "Solarized Dark"
         case .solarizedLight: return "Solarized Light"
+        case .desert: return "Desert"
+        case .paperColorLight: return "PaperColor Light"
+        case .peachpuff: return "Peachpuff"
+        case .tokyoNight: return "Tokyo Night"
         }
     }
     static var ordered: [InstrumentTheme] {
@@ -203,6 +206,7 @@ enum InstrumentTheme: String, CaseIterable {
         // Migrate preferences from the first, generic palette set.
         switch value {
         case "default": return .charcoal
+        case "solarizedDark": return .solarizedLight
         case "midnight": return .nord
         case "forest": return .gruvbox
         case "burgundy": return .dracula
@@ -210,7 +214,7 @@ enum InstrumentTheme: String, CaseIterable {
         default: return .charcoal
         }
     }
-    var isLight: Bool { self == .githubLight || self == .solarizedLight }
+    var isLight: Bool { self == .githubLight || self == .solarizedLight || self == .paperColorLight || self == .peachpuff }
     var colorScheme: ColorScheme { isLight ? .light : .dark }
     var palette: InstrumentPalette { InstrumentPalette(theme: self) }
 }
@@ -230,8 +234,11 @@ struct InstrumentPalette {
         case .gruvbox: return color(0x282828)
         case .githubLight: return color(0xFFFFFF)
         case .monokai: return color(0x272822)
-        case .solarizedDark: return color(0x002B36)
         case .solarizedLight: return color(0xFDF6E3)
+        case .desert: return color(0x333333)
+        case .paperColorLight: return color(0xEEEEEE)
+        case .peachpuff: return color(0xFFDAB9)
+        case .tokyoNight: return color(0x1A1B26)
         }
     }
     var panel: Color {
@@ -242,8 +249,11 @@ struct InstrumentPalette {
         case .gruvbox: return color(0x3C3836)
         case .githubLight: return color(0xF6F8FA)
         case .monokai: return color(0x3E3D32)
-        case .solarizedDark: return color(0x073642)
         case .solarizedLight: return color(0xEEE8D5)
+        case .desert: return color(0x4D4D4D)
+        case .paperColorLight: return color(0xE4E4E4)
+        case .peachpuff: return color(0xF5C195)
+        case .tokyoNight: return color(0x292E42)
         }
     }
     var accent: Color {
@@ -254,8 +264,11 @@ struct InstrumentPalette {
         case .gruvbox: return color(0xFABD2F)
         case .githubLight: return color(0x0969DA)
         case .monokai: return color(0xA6E22E)
-        case .solarizedDark: return color(0x2AA198)
         case .solarizedLight: return color(0x2AA198)
+        case .desert: return color(0xF0E68C)
+        case .paperColorLight: return color(0x005F87)
+        case .peachpuff: return color(0xA52A2A)
+        case .tokyoNight: return color(0x7AA2F7)
         }
     }
     var foreground: Color {
@@ -266,8 +279,11 @@ struct InstrumentPalette {
         case .gruvbox: return color(0xEBDBB2)
         case .githubLight: return color(0x24292F)
         case .monokai: return color(0xF8F8F2)
-        case .solarizedDark: return color(0x93A1A1)
         case .solarizedLight: return color(0x586E75)
+        case .desert: return color(0xFFFFFF)
+        case .paperColorLight: return color(0x444444)
+        case .peachpuff: return color(0x000000)
+        case .tokyoNight: return color(0xC0CAF5)
         }
     }
     var muted: Color {
@@ -278,8 +294,11 @@ struct InstrumentPalette {
         case .gruvbox: return color(0xBDAE93)
         case .githubLight: return color(0x57606A)
         case .monokai: return color(0xCFCFC2)
-        case .solarizedDark: return color(0x93A1A1)
         case .solarizedLight: return color(0x586E75)
+        case .desert: return color(0x6DCEEB)
+        case .paperColorLight: return color(0x005F87)
+        case .peachpuff: return color(0x406090)
+        case .tokyoNight: return color(0xA9B1D6)
         }
     }
     var controlTop: Color {
@@ -290,8 +309,11 @@ struct InstrumentPalette {
         case .gruvbox: return color(0x3C3836)
         case .githubLight: return color(0xFFFFFF)
         case .monokai: return color(0x414339)
-        case .solarizedDark: return color(0x073642)
         case .solarizedLight: return color(0xEEE8D5)
+        case .desert: return color(0x666666)
+        case .paperColorLight: return color(0xE4E4E4)
+        case .peachpuff: return color(0xF5C195)
+        case .tokyoNight: return color(0x292E42)
         }
     }
     var controlBottom: Color {
@@ -302,8 +324,11 @@ struct InstrumentPalette {
         case .gruvbox: return color(0x3C3836)
         case .githubLight: return color(0xFFFFFF)
         case .monokai: return color(0x414339)
-        case .solarizedDark: return color(0x073642)
         case .solarizedLight: return color(0xEEE8D5)
+        case .desert: return color(0x666666)
+        case .paperColorLight: return color(0xE4E4E4)
+        case .peachpuff: return color(0xF5C195)
+        case .tokyoNight: return color(0x292E42)
         }
     }
     var recess: Color { theme == .charcoal ? ink.opacity(0.65) : panel }
@@ -316,13 +341,16 @@ struct InstrumentPalette {
         case .gruvbox: return color(0x665C54)
         case .githubLight: return color(0xD0D7DE)
         case .monokai: return color(0x75715E)
-        case .solarizedDark: return color(0x586E75)
         case .solarizedLight: return color(0x93A1A1)
+        case .desert: return color(0x7F7F8C)
+        case .paperColorLight: return color(0xBCBCBC)
+        case .peachpuff: return color(0xDFBA99)
+        case .tokyoNight: return color(0x545C7E)
         }
     }
     var activeForeground: Color {
         switch theme {
-        case .githubLight: return .white
+        case .githubLight, .paperColorLight, .peachpuff: return .white
         case .solarizedLight: return color(0x002B36)
         default: return ink
         }
@@ -331,6 +359,8 @@ struct InstrumentPalette {
     var lcdDigitColor: Color {
         switch theme {
         case .monokai: return color(0xAE81FF)
+        case .desert: return color(0xFFA0A0)
+        case .tokyoNight: return color(0xFF9E64)
         case .solarizedLight: return color(0x586E75)
         default: return accent
         }
