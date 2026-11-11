@@ -372,7 +372,7 @@ struct InlineTempoField: NSViewRepresentable {
         field.maximumNumberOfLines = 1
         field.formatter = TempoInputFormatter()
         field.cell?.isScrollable = true
-        field.font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold)
+        field.font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .regular)
         field.textColor = NSColor(color)
         field.delegate = context.coordinator
         field.setAccessibilityLabel("Tempo in beats per minute")
@@ -380,7 +380,7 @@ struct InlineTempoField: NSViewRepresentable {
     }
     func updateNSView(_ field: NSTextField, context: Context) {
         context.coordinator.parent = self
-        field.font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold)
+        field.font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .regular)
         field.textColor = NSColor(color)
         // Preserve the user's draft while playback refreshes the readout.
     }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.1
+
+- Use regular-weight BPM numerals in the main view, widget, and inline editor.
+- Show Gap as a dash when off, numbers for fixed intervals, and shuffle arrows for Random.
+
 ## 0.15.0
 
 - Add a third main metric for Gap, draggable through Off, 1, 2, 4, and Random audible bars.

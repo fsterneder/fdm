@@ -22,11 +22,15 @@ struct ModernReadout: View {
         }
     }
     private var gapIndex: Int { GapCycle.options.firstIndex(of: model.gap) ?? 0 }
-    private var gapText: String {
-        if model.inSilentBar { return "\(model.gapBarsRemaining)/\(model.playbackGapBars)" }
-        if model.gap == 0 { return "Off" }
-        if model.gap == GapCycle.random { return "Rnd" }
-        return String(model.gap)
+    @ViewBuilder
+    private var gapValue: some View {
+        if model.inSilentBar {
+            Text("\(model.gapBarsRemaining)/\(model.playbackGapBars)").monospacedDigit()
+        } else if model.gap == GapCycle.random {
+            Image(systemName: "shuffle")
+        } else {
+            Text(model.gap == 0 ? "—" : String(model.gap)).monospacedDigit()
+        }
     }
     private var gapDescription: String {
         if model.gap == 0 { return "Gap off" }
@@ -72,9 +76,9 @@ struct ModernReadout: View {
                     .accessibilityLabel("Subdivision")
                     .accessibilityValue("\(model.subdivisions) clicks per beat")
                     VStack(spacing: 2 * scale) {
-                        Text(gapText)
+                        gapValue
                             .font(.system(size: 52 * scale, weight: .regular))
-                            .monospacedDigit().foregroundColor(palette.gap)
+                            .foregroundColor(palette.gap)
                             .minimumScaleFactor(0.6).lineLimit(1)
                             .frame(width: column - 8 * scale, height: 94 * scale)
                         caption(model.inSilentBar ? "SILENT" : "GAP", scale: scale)
@@ -122,7 +126,7 @@ struct TempoValue: View {
     var body: some View {
         ZStack {
             Text(String(model.bpm))
-                .font(.system(size: fontSize, weight: .semibold))
+                .font(.system(size: fontSize, weight: .regular))
                 .monospacedDigit().foregroundColor(palette.tempo)
                 .minimumScaleFactor(0.7).lineLimit(1)
                 .opacity(editingTempo ? 0 : 1)
@@ -211,7 +215,7 @@ struct CompactReadout: View {
         return HStack(spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(String(model.bpm))
-                    .font(.system(size: 26, weight: .semibold)).monospacedDigit()
+                    .font(.system(size: 26, weight: .regular)).monospacedDigit()
                     .foregroundColor(model.theme.palette.tempo)
                     .accessibilityLabel("Tempo")
                     .accessibilityValue("\(model.bpm) beats per minute")
