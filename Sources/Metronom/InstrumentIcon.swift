@@ -3,10 +3,11 @@ import AppKit
 struct InstrumentIconColors {
     let background: NSColor
     let neutral: NSColor
+    let accent: NSColor?
     let playingBeat: NSColor
 
     static let defaultTheme = InstrumentIconColors(
-        background: rgb(0x17191B), neutral: rgb(0xF8F6F0), playingBeat: rgb(0xFF7D40)
+        background: rgb(0x17191B), neutral: rgb(0xF8F6F0), accent: nil, playingBeat: rgb(0xFF7D40)
     )
     private static func rgb(_ hex: UInt32) -> NSColor {
         NSColor(srgbRed: CGFloat((hex >> 16) & 255) / 255,
@@ -34,8 +35,10 @@ enum InstrumentIconArtwork {
             let centers: [CGFloat] = [254, 426, 598, 770]
             for (index, center) in centers.enumerated() {
                 let circleRect = rect(center - 72, 440, 144, 144)
-                if index < 2 {
-                    (index == 1 ? colors.playingBeat : colors.neutral).setFill()
+                if index < 3 {
+                    // Completed accent, completed neutral, current beat, upcoming beat.
+                    let fill = index == 2 ? colors.playingBeat : (index == 0 ? (colors.accent ?? colors.neutral) : colors.neutral)
+                    fill.setFill()
                     NSBezierPath(ovalIn: circleRect).fill()
                 } else {
                     // Inset the stroke so hollow and filled circles have identical outer sizes.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.3
+
+- Show the third beat as current in the Dock and bundled app icons.
+- Color the first beat with the theme accent only when it differs from the current-beat color; otherwise keep it neutral.
+
 ## 0.16.2
 
 - Keep Random's chosen audible run hidden in the bar preview and accessibility text; show only an unknown-run symbol and silent-bar progress.

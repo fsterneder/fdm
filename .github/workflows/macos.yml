@@ -11,5 +11,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: fdm-macOS
-          path: dist/fdm-0.16.2.zip
+          path: dist/fdm-0.16.3.zip
 

@@ -301,6 +301,7 @@ struct InstrumentPalette {
     var beat: Color { color(colors.beat) }
     var gap: Color { color(colors.gap) }
     var playingBeat: Color { color(colors.playingBeat) }
+    var hasDistinctBeatAccent: Bool { colors.action != colors.playingBeat }
     var action: Color { color(colors.action) }
     private func surface(_ amount: Double) -> Color {
         func channel(_ shift: UInt32) -> Double {
@@ -351,6 +352,7 @@ private enum ThemedDockIcon {
         let colors = InstrumentIconColors(
             background: NSColor(palette.background),
             neutral: NSColor(palette.neutral),
+            accent: palette.hasDistinctBeatAccent ? NSColor(palette.action) : nil,
             playingBeat: NSColor(palette.playingBeat)
         )
         NSApp.applicationIconImage = InstrumentIconArtwork.make(colors: colors)
