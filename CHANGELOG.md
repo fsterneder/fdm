@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.6
+
+- Add a neutral mute indicator beside the widget’s expand control, with a reserved slot to keep its layout stable.
+- Keep normal theme colors and accent gradients during widget gaps; distinguish silence using the existing half-fills.
+
 ## 0.16.5
 
 - Half-fill current and completed widget gap beats: upper half for the accented first beat, lower half otherwise.

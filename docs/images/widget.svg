@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="280.6" height="46" viewBox="0 0 244 40">
-<rect x=".5" y=".5" width="243" height="39" rx="13" fill="#FDF6E3" stroke="#586E75" stroke-opacity=".1"/>
-<g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"><text x="18" y="29" font-size="26" font-weight="600" fill="#268BD2">80</text><text x="53" y="29" font-size="9.5" fill="#586E75" opacity=".65">bpm</text></g>
+<svg xmlns="http://www.w3.org/2000/svg" width="305.9" height="46" viewBox="0 0 266 40">
+<rect x=".5" y=".5" width="265" height="39" rx="13" fill="#FDF6E3" stroke="#586E75" stroke-opacity=".1"/>
+<g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"><text x="18" y="29" font-size="26" fill="#268BD2">80</text><text x="53" y="29" font-size="9.5" fill="#586E75" opacity=".65">bpm</text></g>
 <circle cx="89" cy="20" r="10" fill="#586E75"/><circle cx="114" cy="20" r="10" fill="#586E75"/><circle cx="139" cy="20" r="10" fill="#6C71C4"/><circle cx="164" cy="20" r="9.4" fill="none" stroke="#586E75" stroke-opacity=".8" stroke-width="1.2"/>
-<g stroke="#586E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".8"><path d="m218 18-5-5m0 5v-5h5m4 9 5 5m0-5v5h-5"/></g></svg>
+<g stroke="#586E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".8"><path d="m240 18-5-5m0 5v-5h5m4 9 5 5m0-5v5h-5"/></g><g stroke="#586E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".75"><path d="M207 18h3l4-4v12l-4-4h-3zM204 13l15 15"/></g></svg>

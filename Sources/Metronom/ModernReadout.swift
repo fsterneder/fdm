@@ -6,7 +6,7 @@ enum DisplayGeometry {
     static let width: CGFloat = 468
     static let mainHeight: CGFloat = 234
     static let widgetScale: CGFloat = 1.15
-    static let widgetWidth: CGFloat = 244 * widgetScale
+    static let widgetWidth: CGFloat = 266 * widgetScale
     static let widgetHeight: CGFloat = 40 * widgetScale
 }
 
@@ -226,12 +226,12 @@ private struct BeatLights: View {
     let maxDiameter: CGFloat
     let spacing: CGFloat
     var outlineOpacity: Double = 1
-    var colorSilentBars = false
+    var halfFillSilentBars = false
     var body: some View {
         // Preview meter edits immediately while audio completes the current bar.
         let count = max(1, model.beats)
         let playing = model.playing
-        let silent = colorSilentBars && playing && model.inSilentBar
+        let silent = halfFillSilentBars && playing && model.inSilentBar
         let accent = model.accent
         let current = model.currentBeat >= 0 ? model.currentBeat % count : -1
         let beatTime = model.beatTime
@@ -247,8 +247,8 @@ private struct BeatLights: View {
                     let isCurrent = count == 1 ? pulse : playing && current == index
                     let isPlayed = count > 1 && playing && current >= 0 && index < current
                     let hasAccent = accent && index == 0
-                    let isAccented = hasAccent && !silent
-                    let color = silent ? palette.gap : (isAccented ? palette.action : (isCurrent ? palette.playingBeat : palette.neutral))
+                    let isAccented = hasAccent
+                    let color = isAccented ? palette.action : (isCurrent ? palette.playingBeat : palette.neutral)
                     let highlight = LinearGradient(
                         colors: isAccented && isCurrent ? [palette.action, palette.playingBeat] : [color, color],
                         startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -288,7 +288,7 @@ struct CompactReadout: View {
                     .accessibilityHidden(true)
             }
             .fixedSize(horizontal: true, vertical: false)
-            BeatLights(model: model, width: beatWidth, maxDiameter: 20, spacing: 5, outlineOpacity: 0.8, colorSilentBars: true)
+            BeatLights(model: model, width: beatWidth, maxDiameter: 20, spacing: 5, outlineOpacity: 0.8, halfFillSilentBars: true)
                 .frame(width: beatWidth, height: 32)
         }
         .padding(.leading, 8)

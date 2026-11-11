@@ -889,6 +889,14 @@ struct TempoWidget: View {
     var body: some View {
         HStack(spacing: 8) {
             CompactReadout(model: model)
+            Image(systemName: "speaker.slash")
+                .font(.system(size: 12, weight: .regular))
+                .foregroundColor(palette.neutral)
+                .frame(width: 14, height: 28)
+                .opacity(model.volume == 0 ? 0.75 : 0)
+                .accessibilityLabel("Muted")
+                .accessibilityHidden(model.volume != 0)
+                .help(model.volume == 0 ? "Muted (M to unmute)" : "")
             Button(action: showInstrument) {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
                     .font(.system(size: 12, weight: .medium))
