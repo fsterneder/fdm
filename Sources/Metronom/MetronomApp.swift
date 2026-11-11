@@ -22,6 +22,8 @@ struct MetronomApp: App {
                 Button("Tap Tempo") { model.tap() }.keyboardShortcut("t", modifiers: [])
                 Button("Faster") { model.bpm += 1 }.keyboardShortcut(.upArrow, modifiers: [])
                 Button("Slower") { model.bpm -= 1 }.keyboardShortcut(.downArrow, modifiers: [])
+                Button("Faster by 10 BPM") { model.bpm += 10 }.keyboardShortcut(.rightArrow, modifiers: [])
+                Button("Slower by 10 BPM") { model.bpm -= 10 }.keyboardShortcut(.leftArrow, modifiers: [])
             }
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Widget Mode") { windows.toggle() }
@@ -194,22 +196,32 @@ private enum LCDSegments {
         [0,1,2,3,4,5], [1,2], [0,1,6,4,3], [0,1,6,2,3], [5,6,1,2],
         [0,5,6,2,3], [0,5,6,4,2,3], [0,1,2], [0,1,2,3,4,5,6], [0,1,2,3,5,6]
     ]
+    // Every segment is 8 units thick with a consistent gap at each diagonal join.
+    // Mirror the same geometry instead of drawing seven slightly different polygons.
+    private static func horizontal(y: CGFloat) -> [CGPoint] {
+        [CGPoint(x: 8, y: y), CGPoint(x: 32, y: y),
+         CGPoint(x: 36, y: y + 4), CGPoint(x: 32, y: y + 8),
+         CGPoint(x: 8, y: y + 8), CGPoint(x: 4, y: y + 4)]
+    }
+    private static let upperLeft: [CGPoint] = [
+        CGPoint(x: 0, y: 9), CGPoint(x: 4, y: 5), CGPoint(x: 8, y: 9),
+        CGPoint(x: 8, y: 33), CGPoint(x: 4, y: 37), CGPoint(x: 0, y: 33)
+    ]
     static let polygons: [[CGPoint]] = [
-        [CGPoint(x:8,y:0),CGPoint(x:32,y:0),CGPoint(x:37,y:5),CGPoint(x:32,y:10),CGPoint(x:8,y:10),CGPoint(x:3,y:5)],
-        [CGPoint(x:38,y:6),CGPoint(x:40,y:9),CGPoint(x:40,y:32),CGPoint(x:35,y:37),CGPoint(x:30,y:32),CGPoint(x:30,y:14)],
-        [CGPoint(x:35,y:39),CGPoint(x:40,y:44),CGPoint(x:40,y:67),CGPoint(x:37,y:70),CGPoint(x:30,y:62),CGPoint(x:30,y:44)],
-        [CGPoint(x:8,y:66),CGPoint(x:32,y:66),CGPoint(x:37,y:71),CGPoint(x:32,y:76),CGPoint(x:8,y:76),CGPoint(x:3,y:71)],
-        [CGPoint(x:5,y:39),CGPoint(x:10,y:44),CGPoint(x:10,y:62),CGPoint(x:3,y:70),CGPoint(x:0,y:67),CGPoint(x:0,y:44)],
-        [CGPoint(x:2,y:6),CGPoint(x:10,y:14),CGPoint(x:10,y:32),CGPoint(x:5,y:37),CGPoint(x:0,y:32),CGPoint(x:0,y:9)],
-        [CGPoint(x:8,y:33),CGPoint(x:32,y:33),CGPoint(x:37,y:38),CGPoint(x:32,y:43),CGPoint(x:8,y:43),CGPoint(x:3,y:38)]
+        horizontal(y: 0),
+        upperLeft.map { CGPoint(x: 40 - $0.x, y: $0.y) },
+        upperLeft.map { CGPoint(x: 40 - $0.x, y: 76 - $0.y) },
+        horizontal(y: 68),
+        upperLeft.map { CGPoint(x: $0.x, y: 76 - $0.y) },
+        upperLeft,
+        horizontal(y: 34)
     ]
     static func path(digit: Int, origin: CGPoint, height: CGFloat) -> Path {
         var path = Path()
         let scale = height / 76
         for segment in numbers[min(9, max(0, digit))] {
             let points = polygons[segment].map { point in
-                // A slight lean matches a physical segmented LCD.
-                CGPoint(x: origin.x + (point.x + (76 - point.y) * 0.07) * scale,
+                CGPoint(x: origin.x + point.x * scale,
                         y: origin.y + point.y * scale)
             }
             path.addLines(points)
@@ -235,7 +247,7 @@ struct HardwareLCD: View {
                 }
                 func number(_ value: Int, places: Int, x: CGFloat, y: CGFloat, height: CGFloat) {
                     let chars = Array(String(value))
-                    let advance = height * 0.59
+                    let advance = height * (46.0 / 76.0)
                     for index in 0..<places {
                         let source = index - (places - chars.count)
                         if source >= 0, source < chars.count, let digit = chars[source].wholeNumberValue {
@@ -446,7 +458,7 @@ struct InstrumentView: View {
                         .tint(Finish.lcd).controlSize(.small).accessibilityLabel("Volume")
                 }.padding(.horizontal, 4)
             }
-            Text("SPACE  play / stop     T  tap     ↑ ↓  tempo")
+            Text("SPACE play/stop · T tap · ↑↓ ±1 · ←→ ±10")
                 .font(.system(size: 9, design: .monospaced)).foregroundColor(Finish.muted.opacity(0.75))
         }
         .padding(18).frame(width: 320)
@@ -471,7 +483,7 @@ struct InstrumentView: View {
 }
 
 
-// Intercept Space before focused buttons consume it as their activation key.
+// Route transport and tempo shortcuts before focused controls consume them.
 // This monitor is local to this app and does not require accessibility permission.
 @MainActor
 final class WindowModes: ObservableObject {
@@ -504,10 +516,18 @@ final class WindowModes: ObservableObject {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self,
                   event.window === self.mainWindow || event.window === self.widget,
-                  event.keyCode == 49,
                   event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
             else { return event }
-            if !event.isARepeat { self.model?.toggle() }
+            switch event.keyCode {
+            case 49: // Space overrides focused button activation.
+                if !event.isARepeat { self.model?.toggle() }
+            case 123: // Left overrides a focused slider or picker.
+                self.model?.bpm -= 10
+            case 124: // Right
+                self.model?.bpm += 10
+            default:
+                return event
+            }
             return nil
         }
     }
