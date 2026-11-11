@@ -70,7 +70,7 @@ All voices have a higher, louder first beat and quieter subdivisions. Existing v
 
 Click the Mini button beside fdm-3, or press Shift–Command–M, to switch to a 196 × 82 floating window that displays the tempo, current beat indicators, and a visible expand button. It stays above ordinary app windows, including while another app is active. Drag the background to move it. Playback continues when switching modes.
 
-The widget has a small status light: grey while stopped and red while playing. Click the expand button below it to return to the full window. Use Space while focused or the context menu to start/stop playback. Right-click the widget for Start/Stop, Tap Tempo, or Show Full fdm-3. Shift–Command–M also returns to the full instrument. Keyboard shortcuts apply while a metronome window is focused; they are not system-wide shortcuts. Space overrides focused button activation and holding it does not repeatedly toggle playback.
+The widget has a small status light: muted while stopped and the selected theme’s accent color while playing. Click the expand button below it to return to the full window. Use Space while focused or the context menu to start/stop playback. Right-click the widget for Start/Stop, Tap Tempo, or Show Full fdm-3. Shift–Command–M also returns to the full instrument. Keyboard shortcuts apply while a metronome window is focused; they are not system-wide shortcuts. Space overrides focused button activation and holding it does not repeatedly toggle playback.
 
 ## Homebrew distribution
 
