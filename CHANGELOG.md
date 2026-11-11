@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.1
+
+- Give Default a coral first-beat/Play accent (#FF8370) and blue current beat (#70A5FF), including its bundled and themed icons.
+- Remove GitHub Light and Monokai; migrate their saved selections to PaperColor Light and Dracula respectively.
+
 ## 0.17.0
 
 - Add 1/1 and 1/2 note modes: click every four or two beats while all visual beats continue.

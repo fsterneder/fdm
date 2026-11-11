@@ -224,15 +224,13 @@ final class Metronome: ObservableObject {
 
 
 enum InstrumentTheme: String, CaseIterable {
-    case charcoal, dracula, nord, gruvbox, githubLight, monokai, solarizedLight, desert, paperColorLight, peachpuff, tokyoNight
+    case charcoal, dracula, nord, gruvbox, solarizedLight, desert, paperColorLight, peachpuff, tokyoNight
     var name: String {
         switch self {
         case .charcoal: return "Default"
         case .dracula: return "Dracula"
         case .nord: return "Nord"
         case .gruvbox: return "Gruvbox"
-        case .githubLight: return "GitHub Light"
-        case .monokai: return "Monokai"
         case .solarizedLight: return "Solarized Light"
         case .desert: return "Desert"
         case .paperColorLight: return "PaperColor Light"
@@ -252,11 +250,12 @@ enum InstrumentTheme: String, CaseIterable {
         case "midnight": return .nord
         case "forest": return .gruvbox
         case "burgundy": return .dracula
-        case "white": return .githubLight
+        case "white", "githubLight": return .paperColorLight
+        case "monokai": return .dracula
         default: return .charcoal
         }
     }
-    var isLight: Bool { self == .githubLight || self == .solarizedLight || self == .paperColorLight || self == .peachpuff }
+    var isLight: Bool { self == .solarizedLight || self == .paperColorLight || self == .peachpuff }
     var colorScheme: ColorScheme { isLight ? .light : .dark }
     var palette: InstrumentPalette { InstrumentPalette(theme: self) }
 }
@@ -277,12 +276,10 @@ struct InstrumentPalette {
     let theme: InstrumentTheme
     private var colors: ThemeColors {
         switch theme {
-        case .charcoal: return ThemeColors(background: 0x17191B, neutral: 0xF8F6F0, tempo: 0xF8F6F0, beat: 0xF8F6F0, gap: 0xF8F6F0, playingBeat: 0xFF7D40, action: 0xFF7D40)
+        case .charcoal: return ThemeColors(background: 0x17191B, neutral: 0xF8F6F0, tempo: 0xF8F6F0, beat: 0xF8F6F0, gap: 0xF8F6F0, playingBeat: 0x70A5FF, action: 0xFF8370)
         case .dracula: return ThemeColors(background: 0x282A36, neutral: 0xF8F8F2, tempo: 0xBD93F9, beat: 0xFFB86C, gap: 0xFF79C6, playingBeat: 0x8BE9FD, action: 0x50FA7B)
         case .nord: return ThemeColors(background: 0x2E3440, neutral: 0xECEFF4, tempo: 0x88C0D0, beat: 0xB48EAD, gap: 0xEBCB8B, playingBeat: 0x8FBCBB, action: 0xA3BE8C)
         case .gruvbox: return ThemeColors(background: 0x282828, neutral: 0xEBDBB2, tempo: 0xFABD2F, beat: 0xFE8019, gap: 0xD3869B, playingBeat: 0x8EC07C, action: 0xB8BB26)
-        case .githubLight: return ThemeColors(background: 0xFFFFFF, neutral: 0x24292F, tempo: 0x0969DA, beat: 0x953800, gap: 0xBF3989, playingBeat: 0x8250DF, action: 0x1A7F37)
-        case .monokai: return ThemeColors(background: 0x272822, neutral: 0xF8F8F2, tempo: 0xAE81FF, beat: 0xFD971F, gap: 0xF92672, playingBeat: 0x66D9EF, action: 0xA6E22E)
         case .solarizedLight: return ThemeColors(background: 0xFDF6E3, neutral: 0x586E75, tempo: 0x268BD2, beat: 0xCB4B16, gap: 0xD33682, playingBeat: 0x6C71C4, action: 0x168A81)
         case .desert: return ThemeColors(background: 0x333333, neutral: 0xFFFFFF, tempo: 0xFFA0A0, beat: 0xF0E68C, gap: 0xDDA0DD, playingBeat: 0x98FB98, action: 0x87CEEB)
         case .paperColorLight: return ThemeColors(background: 0xEEEEEE, neutral: 0x444444, tempo: 0x005F87, beat: 0xAF0000, gap: 0x875FAF, playingBeat: 0x008787, action: 0x5F8700)

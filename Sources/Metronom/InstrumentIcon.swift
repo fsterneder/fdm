@@ -7,7 +7,7 @@ struct InstrumentIconColors {
     let playingBeat: NSColor
 
     static let defaultTheme = InstrumentIconColors(
-        background: rgb(0x17191B), neutral: rgb(0xF8F6F0), accent: nil, playingBeat: rgb(0xFF7D40)
+        background: rgb(0x17191B), neutral: rgb(0xF8F6F0), accent: rgb(0xFF8370), playingBeat: rgb(0x70A5FF)
     )
     private static func rgb(_ hex: UInt32) -> NSColor {
         NSColor(srgbRed: CGFloat((hex >> 16) & 255) / 255,
