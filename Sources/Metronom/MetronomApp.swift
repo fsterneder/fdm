@@ -53,6 +53,9 @@ final class Metronome: ObservableObject {
     @Published var beats: Int { didSet { UserDefaults.standard.set(beats, forKey: "beats"); restart() } }
     @Published var subdivisions: Int { didSet { UserDefaults.standard.set(subdivisions, forKey: "subdivisions"); restart() } }
     @Published var sound: Int { didSet { UserDefaults.standard.set(sound, forKey: "sound"); restart() } }
+    @Published var gap: Int {
+        didSet { UserDefaults.standard.set(gap, forKey: "gap"); restart() }
+    }
     @Published var theme: InstrumentTheme {
         didSet { UserDefaults.standard.set(theme.rawValue, forKey: "theme") }
     }
@@ -62,6 +65,7 @@ final class Metronome: ObservableObject {
     } }
     @Published private(set) var playing = false
     @Published private(set) var currentBeat = -1
+    @Published private(set) var inSilentBar = false
     @Published private(set) var beatTime: TimeInterval = 0
     @Published private(set) var beatNumber = 0
     @Published var error: String?
@@ -74,6 +78,7 @@ final class Metronome: ObservableObject {
     private var generation = UUID()
     private var tapper = TapTempo()
     private var buffers: [AVAudioPCMBuffer] = []
+    private var silentBuffers: [AVAudioPCMBuffer] = []
     private var activity: NSObjectProtocol?
 
     init() {
@@ -86,6 +91,8 @@ final class Metronome: ObservableObject {
         sound = min(ClickVoice.allCases.count - 1, max(0, defaults.integer(forKey: "sound")))
         volume = min(1, max(0, defaults.double(forKey: "volume")))
         theme = InstrumentTheme.restored(defaults.string(forKey: "theme"))
+        let savedGap = defaults.integer(forKey: "gap")
+        gap = GapCycle.options.contains(savedGap) ? savedGap : 0
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: format)
         player.volume = Float(volume)
@@ -101,7 +108,14 @@ final class Metronome: ObservableObject {
             if !engine.isRunning { try engine.start() }
             generation = UUID()
             buffers = (0...2).map { makeClick(kind: $0) }
+            silentBuffers = buffers.map { source in
+                let silence = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: source.frameLength)!
+                silence.frameLength = source.frameLength
+                silence.floatChannelData![0].update(repeating: 0, count: Int(source.frameLength))
+                return silence
+            }
             playing = true
+            inSilentBar = false
             nextFrame = 0; tick = 0; currentBeat = -1; beatTime = 0; beatNumber = 0
             activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .idleSystemSleepDisabled], reason: "Playing metronome")
             // Audio sample times determine every click; the timer only replenishes the queue.
@@ -118,7 +132,7 @@ final class Metronome: ObservableObject {
     }
     func stop() {
         generation = UUID(); timer?.invalidate(); timer = nil
-        player.stop(); playing = false; currentBeat = -1; beatTime = 0
+        player.stop(); playing = false; currentBeat = -1; beatTime = 0; inSilentBar = false
         if let activity { ProcessInfo.processInfo.endActivity(activity); self.activity = nil }
     }
     private func refill() {
@@ -134,13 +148,16 @@ final class Metronome: ObservableObject {
             let mainBeat = tick % subdivisions == 0
             let beat = beats == 0 ? 0 : (tick / subdivisions) % beats
             let kind = !mainBeat ? 2 : (beats > 0 && beat == 0 ? 0 : 1)
+            let silent = GapCycle.isSilent(tick: tick, beats: beats, subdivisions: subdivisions, silentBars: gap)
+            let buffer = silent ? silentBuffers[kind] : buffers[kind]
             let frame = AVAudioFramePosition(nextFrame.rounded())
-            player.scheduleBuffer(buffers[kind], at: AVAudioTime(sampleTime: frame, atRate: format.sampleRate), options: [], completionCallbackType: .dataPlayedBack) { [weak self] _ in
+            player.scheduleBuffer(buffer, at: AVAudioTime(sampleTime: frame, atRate: format.sampleRate), options: [], completionCallbackType: .dataPlayedBack) { [weak self] _ in
                 if mainBeat {
                     Task { @MainActor in
                         guard let self, self.playing, self.generation == run else { return }
                         self.beatTime = Date.timeIntervalSinceReferenceDate
                         self.beatNumber &+= 1
+                        self.inSilentBar = silent
                         self.currentBeat = beat
                     }
                 }
@@ -429,6 +446,7 @@ struct HardwareLCD: View {
         let currentBeat = model.currentBeat
         let beatTime = model.beatTime
         let beatNumber = model.beatNumber
+        let inSilentBar = model.inSilentBar
         let compact = self.compact
         return TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !playing)) { timeline in
             Canvas { context, size in
@@ -452,13 +470,14 @@ struct HardwareLCD: View {
                 }
                 if compact {
                     number(bpm, places: 3, x: 9, y: 7, height: 38)
-                    label("TEMPO", x: 87, y: 32, size: 7)
+                    label(inSilentBar ? "GAP" : "TEMPO", x: 87, y: 32, size: 7)
                 } else {
                     number(bpm, places: 3, x: 65, y: 16, height: 64)
                     number(beats, places: 1, x: 235, y: 16, height: 64)
                     label("TEMPO", x: 9, y: 67, size: 11)
                     label("BEAT", x: 194, y: 67, size: 11)
                     label("VOICE", x: 47, y: 105, size: 10)
+                    if inSilentBar { label("GAP", x: 196, y: 105, size: 10) }
                     number(sound + 1, places: 1, x: 101, y: 93, height: 29)
                     // The pendulum changes direction on every audible pulse, including unaccented mode.
                     var symbol = Path()
@@ -513,7 +532,7 @@ struct HardwareLCD: View {
             .strokeBorder(theme == .charcoal ? .black.opacity(0.65) : palette.fieldBorder, lineWidth: compact ? 1 : 2))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("LCD")
-        .accessibilityValue("\(bpm) beats per minute, \(beats == 0 ? "no accent" : "\(beats) beats per bar"), voice \(sound + 1), \(playing ? "playing" : "stopped")")
+        .accessibilityValue("\(bpm) beats per minute, \(beats == 0 ? "no accent" : "\(beats) beats per bar"), voice \(sound + 1), \(playing ? (inSilentBar ? "silent practice bar" : "playing") : "stopped")")
     }
 }
 
@@ -699,8 +718,8 @@ struct InstrumentView: View {
 
             VStack(spacing: 10) {
                 HStack(spacing: 8) {
-                    SettingMenu(title: "BEATS", value: $model.beats, values: Metronome.beatOptions)
                     SettingMenu(title: "DIVISION", value: $model.subdivisions, values: Array(1...4))
+                    gapSelector
                 }
                 HStack(spacing: 8) {
                     soundSelector
@@ -725,6 +744,18 @@ struct InstrumentView: View {
         )) {
             Button("OK") { model.error = nil }
         } message: { Text(model.error ?? "") }
+    }
+
+    private var gapSelector: some View {
+        ChoiceDropdown(
+            title: "GAP", selectedID: String(model.gap),
+            selectedLabel: model.gap == 0 ? "Off" : "\(model.gap) silent \(model.gap == 1 ? "bar" : "bars")",
+            options: GapCycle.options.map {
+                DropdownChoice(id: String($0), label: $0 == 0 ? "Off" : "\($0) silent \($0 == 1 ? "bar" : "bars")")
+            }
+        ) { id in
+            if let gap = Int(id), GapCycle.options.contains(gap) { model.gap = gap }
+        }
     }
 
     private var soundSelector: some View {
