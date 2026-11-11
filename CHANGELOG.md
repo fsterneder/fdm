@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.7
+
+- Align widget tempo, beats, and controls in explicit fixed-width groups with balanced spacing.
+- Keep the beat row stationary across two- and three-digit tempos, mute changes, and beat counts.
+
 ## 0.16.6
 
 - Add a neutral mute indicator beside the widget’s expand control, with a reserved slot to keep its layout stable.

@@ -275,8 +275,8 @@ private struct BeatLights: View {
 struct CompactReadout: View {
     @ObservedObject var model: Metronome
     var body: some View {
-        let beatWidth: CGFloat = model.bpm >= 100 ? 100 : 104
-        return HStack(spacing: 6) {
+        let beatWidth: CGFloat = 104
+        return HStack(spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(String(model.bpm))
                     .font(.system(size: 26, weight: .regular)).monospacedDigit()
@@ -288,11 +288,11 @@ struct CompactReadout: View {
                     .accessibilityHidden(true)
             }
             .fixedSize(horizontal: true, vertical: false)
+            .frame(width: 72, height: 32)
             BeatLights(model: model, width: beatWidth, maxDiameter: 20, spacing: 5, outlineOpacity: 0.8, halfFillSilentBars: true)
                 .frame(width: beatWidth, height: 32)
         }
-        .padding(.leading, 8)
-        .frame(width: 188, height: 32, alignment: .leading)
+        .frame(width: 186, height: 32)
     }
 }
 

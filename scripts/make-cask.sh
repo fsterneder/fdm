@@ -2,10 +2,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if [[ $# != 1 || ! "$1" =~ ^https:// ]]; then
-  echo "Usage: bash scripts/make-cask.sh https://HOST/path/fdm-0.16.6.zip" >&2
+  echo "Usage: bash scripts/make-cask.sh https://HOST/path/fdm-0.16.7.zip" >&2
   exit 1
 fi
-archive="dist/fdm-0.16.6.zip"
+archive="dist/fdm-0.16.7.zip"
 [[ -f "$archive" ]] || { echo "Run scripts/build.sh first." >&2; exit 1; }
 # Reject characters that could alter the generated Ruby formula.
 case "$1" in *\"*|*\\*|*\#*|*$'\n'*|*$'\r'*) echo "Unsupported URL characters" >&2; exit 1;; esac
@@ -13,7 +13,7 @@ checksum="$(shasum -a 256 "$archive" | awk '{print $1}')"
 mkdir -p dist/Casks
 cat > dist/Casks/fdm.rb <<CASK
 cask "fdm" do
-  version "0.16.6"
+  version "0.16.7"
   sha256 "$checksum"
   url "$1"
   name "fdm"

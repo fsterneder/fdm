@@ -887,27 +887,30 @@ struct TempoWidget: View {
     private var palette: InstrumentPalette { model.theme.palette }
     var showInstrument: () -> Void
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             CompactReadout(model: model)
-            Image(systemName: "speaker.slash")
-                .font(.system(size: 12, weight: .regular))
-                .foregroundColor(palette.neutral)
-                .frame(width: 14, height: 28)
-                .opacity(model.volume == 0 ? 0.75 : 0)
-                .accessibilityLabel("Muted")
-                .accessibilityHidden(model.volume != 0)
-                .help(model.volume == 0 ? "Muted (M to unmute)" : "")
-            Button(action: showInstrument) {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
+            HStack(spacing: 6) {
+                Image(systemName: "speaker.slash")
                     .font(.system(size: 12, weight: .medium))
-                    .frame(width: 28, height: 28)
-                    .contentShape(Rectangle())
+                    .foregroundColor(palette.neutral)
+                    .frame(width: 18, height: 28)
+                    .opacity(model.volume == 0 ? 0.75 : 0)
+                    .accessibilityLabel("Muted")
+                    .accessibilityHidden(model.volume != 0)
+                    .help(model.volume == 0 ? "Muted (M to unmute)" : "")
+                Button(action: showInstrument) {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 12, weight: .medium))
+                        .frame(width: 22, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).foregroundColor(palette.neutral.opacity(0.8))
+                .help("Return to fdm (Tab or \\)")
+                .accessibilityLabel("Return to full fdm window")
             }
-            .buttonStyle(.plain).foregroundColor(palette.neutral.opacity(0.8))
-            .help("Return to fdm (Tab or \\)")
-            .accessibilityLabel("Return to full fdm window")
+            .frame(width: 46, height: 32)
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 12)
         .frame(width: DisplayGeometry.widgetWidth / DisplayGeometry.widgetScale,
                height: DisplayGeometry.widgetHeight / DisplayGeometry.widgetScale)
         .background(LinearGradient(colors: palette.bodyColors,
