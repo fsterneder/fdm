@@ -1,6 +1,15 @@
 import XCTest
 @testable import TempoCore
 final class TempoTests: XCTestCase {
+    func testDirectTempoEntry() {
+        XCTAssertEqual(Tempo.fromText(" 120 "), 120)
+        XCTAssertEqual(Tempo.fromText("300"), 252)
+        XCTAssertEqual(Tempo.fromText("-5"), 30)
+        XCTAssertNil(Tempo.fromText(""))
+        XCTAssertNil(Tempo.fromText("abc"))
+        XCTAssertNil(Tempo.fromText("120.5"))
+        XCTAssertNil(Tempo.fromText(String(repeating: "9", count: 40)))
+    }
     func testTempoBounds() {
         XCTAssertEqual(Tempo.clamp(0), 30)
         XCTAssertEqual(Tempo.clamp(300), 252)

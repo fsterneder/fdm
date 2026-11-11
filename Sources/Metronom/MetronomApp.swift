@@ -21,12 +21,12 @@ struct MetronomApp: App {
             // Keep one instrument window; widget mode uses a companion panel.
             CommandGroup(replacing: .newItem) {}
             CommandGroup(after: .appInfo) {
-                Button("Start / Stop") { model.toggle() }.keyboardShortcut(.space, modifiers: [])
-                Button("Tap Tempo") { model.tap() }.keyboardShortcut("t", modifiers: [])
-                Button("Faster") { model.bpm += 1 }.keyboardShortcut(.upArrow, modifiers: [])
-                Button("Slower") { model.bpm -= 1 }.keyboardShortcut(.downArrow, modifiers: [])
-                Button("Faster by 10 BPM") { model.bpm += 10 }.keyboardShortcut(.rightArrow, modifiers: [])
-                Button("Slower by 10 BPM") { model.bpm -= 10 }.keyboardShortcut(.leftArrow, modifiers: [])
+                Button("Start / Stop") { model.toggle() }.keyboardShortcut(.space, modifiers: []).disabled(model.editingTempo)
+                Button("Tap Tempo") { model.tap() }.keyboardShortcut("t", modifiers: []).disabled(model.editingTempo)
+                Button("Faster") { model.bpm += 1 }.keyboardShortcut(.upArrow, modifiers: []).disabled(model.editingTempo)
+                Button("Slower") { model.bpm -= 1 }.keyboardShortcut(.downArrow, modifiers: []).disabled(model.editingTempo)
+                Button("Faster by 10 BPM") { model.bpm += 10 }.keyboardShortcut(.rightArrow, modifiers: []).disabled(model.editingTempo)
+                Button("Slower by 10 BPM") { model.bpm -= 10 }.keyboardShortcut(.leftArrow, modifiers: []).disabled(model.editingTempo)
             }
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Widget Mode") { windows.toggle() }
@@ -59,7 +59,13 @@ final class Metronome: ObservableObject {
     @Published var theme: InstrumentTheme {
         didSet { UserDefaults.standard.set(theme.rawValue, forKey: "theme") }
     }
+    @Published var editingTempo = false
+    private var lastAudibleVolume = 0.65
     @Published var volume: Double { didSet {
+        if volume > 0 {
+            lastAudibleVolume = volume
+            UserDefaults.standard.set(volume, forKey: "lastAudibleVolume")
+        }
         player.volume = Float(volume)
         UserDefaults.standard.set(volume, forKey: "volume")
     } }
@@ -90,7 +96,10 @@ final class Metronome: ObservableObject {
         beats = savedBeats == 1 ? 0 : savedBeats
         subdivisions = min(4, max(1, defaults.integer(forKey: "subdivisions")))
         sound = min(ClickVoice.allCases.count - 1, max(0, defaults.integer(forKey: "sound")))
-        volume = min(1, max(0, defaults.double(forKey: "volume")))
+        let savedVolume = min(1, max(0, defaults.double(forKey: "volume")))
+        volume = savedVolume
+        let savedAudibleVolume = defaults.double(forKey: "lastAudibleVolume")
+        lastAudibleVolume = savedVolume > 0 ? savedVolume : (savedAudibleVolume > 0 ? min(1, savedAudibleVolume) : 0.65)
         theme = InstrumentTheme.restored(defaults.string(forKey: "theme"))
         let savedGap = defaults.integer(forKey: "gap")
         gap = GapCycle.options.contains(savedGap) ? savedGap : 0
@@ -99,6 +108,7 @@ final class Metronome: ObservableObject {
         player.volume = Float(volume)
     }
     func toggle() { playing ? stop() : start() }
+    func toggleMute() { volume = volume > 0 ? 0 : lastAudibleVolume }
     func tap() {
         if let tempo = tapper.tap(at: ProcessInfo.processInfo.systemUptime) { bpm = tempo }
     }
@@ -464,6 +474,7 @@ private enum LCDSegments {
 @MainActor
 struct HardwareLCD: View {
     @ObservedObject var model: Metronome
+    @State private var showingTempoEditor = false
     var compact = false
     var body: some View {
         // Read UI-isolated state here; Canvas and its local helpers only use snapshots.
@@ -471,6 +482,7 @@ struct HardwareLCD: View {
         let palette = theme.palette
         let ink = theme == .charcoal ? Color(red: 0.08, green: 0.12, blue: 0.095) : palette.lcdDigitColor
         let bpm = model.bpm
+        let subdivisions = model.subdivisions
         let beats = model.beats
         let sound = model.sound
         let playing = model.playing
@@ -510,6 +522,23 @@ struct HardwareLCD: View {
                     label("VOICE", x: 47, y: 105, size: 10)
                     if inSilentBar { label("GAP", x: 196, y: 105, size: 10) }
                     number(sound + 1, places: 1, x: 101, y: 93, height: 29)
+                    // Monochrome rhythm mark in the lower-right LCD corner.
+                    let stems: [CGFloat] = subdivisions == 1 ? [259] : (subdivisions == 3 ? [246, 257, 268] : [248, 268])
+                    for x in stems {
+                        let head = Path(ellipseIn: CGRect(x: x - 7, y: 137, width: 8, height: 5))
+                        context.fill(head, with: .color(ink))
+                        var stem = Path()
+                        stem.move(to: CGPoint(x: x, y: 139))
+                        stem.addLine(to: CGPoint(x: x, y: 117))
+                        context.stroke(stem, with: .color(ink), lineWidth: 1.7)
+                    }
+                    if subdivisions > 1, let first = stems.first, let last = stems.last {
+                        context.fill(Path(CGRect(x: first, y: 116, width: last - first + 1, height: 3)), with: .color(ink))
+                        if subdivisions == 4 {
+                            context.fill(Path(CGRect(x: first, y: 122, width: last - first + 1, height: 3)), with: .color(ink))
+                        }
+                        if subdivisions == 3 { label("3", x: 254, y: 105, size: 8) }
+                    }
                     // The pendulum changes direction on every audible pulse, including unaccented mode.
                     var symbol = Path()
                     symbol.move(to: CGPoint(x: 11, y: 115))
@@ -561,9 +590,76 @@ struct HardwareLCD: View {
         .clipShape(RoundedRectangle(cornerRadius: compact ? 5 : 9))
         .overlay(RoundedRectangle(cornerRadius: compact ? 5 : 9)
             .strokeBorder(theme == .charcoal ? .black.opacity(0.65) : palette.fieldBorder, lineWidth: compact ? 1 : 2))
-        .accessibilityElement(children: .ignore)
+        .overlay {
+            GeometryReader { geometry in
+                let logical = compact ? CGSize(width: 140, height: 66) : CGSize(width: 280, height: 154)
+                let target = compact ? CGRect(x: 5, y: 4, width: 78, height: 44)
+                    : CGRect(x: 60, y: 10, width: 125, height: 76)
+                Button {
+                    showingTempoEditor = true
+                } label: {
+                    Color.clear.contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .frame(width: target.width * geometry.size.width / logical.width,
+                       height: target.height * geometry.size.height / logical.height)
+                .position(x: target.midX * geometry.size.width / logical.width,
+                          y: target.midY * geometry.size.height / logical.height)
+                .help("Click to enter tempo")
+                .accessibilityLabel("Edit tempo")
+                .accessibilityValue("\(bpm) beats per minute")
+                .popover(isPresented: $showingTempoEditor, arrowEdge: .bottom) {
+                    TempoEntry(bpm: model.bpm) { value in
+                        model.bpm = value
+                        showingTempoEditor = false
+                    } onCancel: {
+                        showingTempoEditor = false
+                    }
+                }
+            }
+        }
+        .onChange(of: showingTempoEditor) { model.editingTempo = $0 }
+        .onDisappear { model.editingTempo = false }
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("LCD")
         .accessibilityValue("\(bpm) beats per minute, \(beats == 0 ? "no accent" : "\(beats) beats per bar"), voice \(sound + 1), \(playing ? (inSilentBar ? "silent practice bar" : "playing") : "stopped")")
+    }
+}
+
+@MainActor
+struct TempoEntry: View {
+    @State private var text: String
+    @FocusState private var focused: Bool
+    let onSet: (Int) -> Void
+    let onCancel: () -> Void
+    init(bpm: Int, onSet: @escaping (Int) -> Void, onCancel: @escaping () -> Void) {
+        _text = State(initialValue: String(bpm))
+        self.onSet = onSet
+        self.onCancel = onCancel
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Tempo").font(.headline)
+            TextField("BPM", text: $text)
+                .font(.system(size: 24, design: .monospaced))
+                .textFieldStyle(.roundedBorder)
+                .focused($focused)
+                .onSubmit { apply() }
+                .accessibilityLabel("Tempo in beats per minute")
+            Text("30–252 BPM").font(.caption).foregroundColor(.secondary)
+            HStack {
+                Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Set", action: apply)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(Tempo.fromText(text) == nil)
+            }
+        }
+        .padding(16).frame(width: 210)
+        .onAppear { focused = true }
+    }
+    private func apply() {
+        if let value = Tempo.fromText(text) { onSet(value) }
     }
 }
 
@@ -658,17 +754,16 @@ final class ChoiceAnchorView: NSView {
 }
 
 @MainActor
-struct SettingMenu: View {
-    let title: String
+struct SubdivisionSelector: View {
     @Binding var value: Int
-    let values: [Int]
+    private let labels = ["Quarter notes", "Eighth notes", "Triplets", "16th notes"]
     var body: some View {
         ChoiceDropdown(
-            title: title, selectedID: String(value),
-            selectedLabel: value == 0 ? "No accent" : "\(value)",
-            options: values.map { DropdownChoice(id: String($0), label: $0 == 0 ? "No accent" : "\($0)") }
+            title: "SUBDIVISION", selectedID: String(value),
+            selectedLabel: labels[min(3, max(0, value - 1))],
+            options: labels.enumerated().map { DropdownChoice(id: String($0.offset + 1), label: $0.element) }
         ) { id in
-            if let number = Int(id) { value = number }
+            if let number = Int(id), (1...4).contains(number) { value = number }
         }
     }
 }
@@ -749,7 +844,7 @@ struct InstrumentView: View {
 
             VStack(spacing: 10) {
                 HStack(spacing: 8) {
-                    SettingMenu(title: "DIVISION", value: $model.subdivisions, values: Array(1...4))
+                    SubdivisionSelector(value: $model.subdivisions)
                     gapSelector
                 }
                 HStack(spacing: 8) {
@@ -757,14 +852,19 @@ struct InstrumentView: View {
                     themeSelector
                 }
                 HStack(spacing: 10) {
-                    Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
-                        .font(.system(size: 12)).foregroundColor(palette.muted).frame(width: 18)
+                    Button { model.toggleMute() } label: {
+                        Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
+                            .font(.system(size: 12))
+                            .foregroundColor(model.volume == 0 ? palette.accent : palette.muted)
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(.plain)
+                    .help(model.volume == 0 ? "Unmute" : "Mute")
+                    .accessibilityLabel(model.volume == 0 ? "Unmute" : "Mute")
                     Slider(value: $model.volume, in: 0...1)
                         .tint(palette.sliderTint).controlSize(.small).accessibilityLabel("Volume")
                 }.padding(.horizontal, 4)
             }
-            Text("SPACE play/stop · T tap · ↑↓ ±1 · ←→ ±10")
-                .font(.system(size: 9, design: .monospaced)).foregroundColor(palette.muted.opacity(0.75))
         }
         .padding(18).frame(width: 320)
         .background(LinearGradient(colors: palette.bodyColors,
@@ -865,7 +965,7 @@ final class WindowModes: ObservableObject {
         }
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self,
+            guard let self, self.model?.editingTempo != true,
                   event.window === self.mainWindow || event.window === self.widget,
                   event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
             else { return event }

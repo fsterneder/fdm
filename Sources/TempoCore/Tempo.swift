@@ -2,6 +2,10 @@ import Foundation
 
 public enum Tempo {
     public static func clamp(_ value: Int) -> Int { min(252, max(30, value)) }
+    public static func fromText(_ text: String) -> Int? {
+        guard let value = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) else { return nil }
+        return clamp(value)
+    }
     public static func frames(bpm: Int, subdivisions: Int, sampleRate: Double) -> Double {
         sampleRate * 60 / Double(clamp(bpm)) / Double(max(1, subdivisions))
     }

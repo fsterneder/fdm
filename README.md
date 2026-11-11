@@ -27,15 +27,16 @@ open dist/fdm-3.app
 
 | Control | Action |
 | --- | --- |
-| Dial | Adjust tempo |
+| Dial / click BPM | Adjust tempo / type a value |
 | − / + | Change beats: No accent, then 2–9 |
 | Space | Start / stop |
 | T | Tap tempo |
 | ↑ / ↓ | Tempo ±1 BPM |
 | ← / → | Tempo ±10 BPM |
 | ⇧⌘M | Toggle mini mode |
+| Speaker icon | Mute / restore previous volume |
 
-Choose Division, Gap, Sound, and Theme from the dropdowns. Settings are remembered. Closing the main window quits the app.
+Choose Subdivision, Gap, Sound, and Theme from the dropdowns. Press Return to apply a typed tempo or Escape to cancel; values are limited to 30–252 BPM. The LCD note symbol shows quarter notes, eighths, triplets, or sixteenths. Settings are remembered. Closing the main window quits the app.
 
 ## Gap practice
 
