@@ -14,6 +14,7 @@ struct MetronomApp: App {
         WindowGroup("fdm-3") {
             InstrumentView(model: model, showWidget: { windows.showWidget() })
                 .background(WindowBridge(windows: windows, model: model))
+                .environment(\.instrumentTheme, model.theme)
         }
         .windowResizability(.contentSize)
         .commands {
@@ -51,6 +52,9 @@ final class Metronome: ObservableObject {
     @Published var beats: Int { didSet { UserDefaults.standard.set(beats, forKey: "beats"); restart() } }
     @Published var subdivisions: Int { didSet { UserDefaults.standard.set(subdivisions, forKey: "subdivisions"); restart() } }
     @Published var sound: Int { didSet { UserDefaults.standard.set(sound, forKey: "sound"); restart() } }
+    @Published var theme: InstrumentTheme {
+        didSet { UserDefaults.standard.set(theme.rawValue, forKey: "theme") }
+    }
     @Published var volume: Double { didSet {
         player.volume = Float(volume)
         UserDefaults.standard.set(volume, forKey: "volume")
@@ -79,6 +83,7 @@ final class Metronome: ObservableObject {
         subdivisions = min(4, max(1, defaults.integer(forKey: "subdivisions")))
         sound = min(ClickVoice.allCases.count - 1, max(0, defaults.integer(forKey: "sound")))
         volume = min(1, max(0, defaults.double(forKey: "volume")))
+        theme = InstrumentTheme(rawValue: defaults.string(forKey: "theme") ?? "") ?? .charcoal
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: format)
         player.volume = Float(volume)
@@ -155,32 +160,93 @@ final class Metronome: ObservableObject {
     }
 }
 
+enum InstrumentTheme: String, CaseIterable {
+    case charcoal, midnight, forest, burgundy, white
+    var name: String {
+        switch self {
+        case .charcoal: return "Charcoal"
+        case .midnight: return "Midnight"
+        case .forest: return "Forest"
+        case .burgundy: return "Burgundy"
+        case .white: return "White"
+        }
+    }
+    var isLight: Bool { self == .white }
+    var colorScheme: ColorScheme { isLight ? .light : .dark }
+    var palette: InstrumentPalette { InstrumentPalette(theme: self) }
+}
+
+struct InstrumentPalette {
+    let theme: InstrumentTheme
+    var ink: Color {
+        switch theme {
+        case .charcoal: return Color(red: 0.055, green: 0.063, blue: 0.067)
+        case .midnight: return Color(red: 0.045, green: 0.075, blue: 0.13)
+        case .forest: return Color(red: 0.045, green: 0.10, blue: 0.075)
+        case .burgundy: return Color(red: 0.13, green: 0.045, blue: 0.07)
+        case .white: return Color(red: 0.89, green: 0.90, blue: 0.91)
+        }
+    }
+    var panel: Color {
+        switch theme {
+        case .charcoal: return Color(red: 0.105, green: 0.117, blue: 0.122)
+        case .midnight: return Color(red: 0.11, green: 0.17, blue: 0.26)
+        case .forest: return Color(red: 0.11, green: 0.19, blue: 0.145)
+        case .burgundy: return Color(red: 0.24, green: 0.10, blue: 0.135)
+        case .white: return Color(red: 0.99, green: 0.985, blue: 0.975)
+        }
+    }
+    var foreground: Color { theme.isLight ? Color(white: 0.12) : .white }
+    var muted: Color {
+        theme.isLight ? Color(red: 0.32, green: 0.35, blue: 0.36)
+            : (theme == .charcoal ? Color(red: 0.52, green: 0.56, blue: 0.56)
+                : Color(red: 0.58, green: 0.62, blue: 0.62))
+    }
+    var controlTop: Color { theme.isLight ? .white : Color(white: 0.23) }
+    var controlBottom: Color { theme.isLight ? Color(white: 0.86) : Color(white: 0.16) }
+    var recess: Color { theme.isLight ? .black.opacity(0.055) : ink.opacity(0.65) }
+    var border: Color { theme.isLight ? .black : .white }
+    var sliderTint: Color { theme.isLight ? Color(red: 0.29, green: 0.40, blue: 0.28) : Finish.lcd }
+    var dialTop: Color { theme.isLight ? Color(white: 0.99) : Color(white: 0.29) }
+    var dialBottom: Color { theme.isLight ? Color(white: 0.72) : Color(white: 0.15) }
+}
+
+private struct InstrumentThemeKey: EnvironmentKey {
+    static let defaultValue: InstrumentTheme = .charcoal
+}
+
+extension EnvironmentValues {
+    var instrumentTheme: InstrumentTheme {
+        get { self[InstrumentThemeKey.self] }
+        set { self[InstrumentThemeKey.self] = newValue }
+    }
+}
+
 private enum Finish {
-    static let ink = Color(red: 0.055, green: 0.063, blue: 0.067)
-    static let panel = Color(red: 0.105, green: 0.117, blue: 0.122)
-    static let muted = Color(red: 0.52, green: 0.56, blue: 0.56)
     static let lcd = Color(red: 0.74, green: 0.81, blue: 0.66)
     static let orange = Color(red: 1.0, green: 0.49, blue: 0.25)
     static let transportRed = Color(red: 0.92, green: 0.20, blue: 0.24)
 }
 
 struct InstrumentButtonStyle: ButtonStyle {
+    @Environment(\.instrumentTheme) private var theme
+    private var palette: InstrumentPalette { theme.palette }
     var accent = false
     var radius: CGFloat = 10
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundColor(accent ? Color.white : Color(white: 0.87))
+            .foregroundColor(accent ? Color.white : palette.foreground.opacity(0.87))
             .background(
                 LinearGradient(
                     colors: accent
                         ? [Finish.transportRed, Color(red: 0.66, green: 0.08, blue: 0.12)]
-                        : [Color(white: 0.23), Color(white: 0.16)],
+                        : [palette.controlTop, palette.controlBottom],
                     startPoint: .top, endPoint: .bottom
                 ),
                 in: RoundedRectangle(cornerRadius: radius)
             )
             .overlay(RoundedRectangle(cornerRadius: radius)
-                .strokeBorder(.white.opacity(configuration.isPressed ? 0.05 : 0.10), lineWidth: 1))
+                .strokeBorder(palette.border.opacity(configuration.isPressed ? 0.05 : 0.10), lineWidth: 1))
             .shadow(color: .black.opacity(configuration.isPressed ? 0 : 0.3), radius: 2, y: 2)
             .brightness(configuration.isPressed ? -0.08 : 0)
             .offset(y: configuration.isPressed ? 1 : 0)
@@ -327,6 +393,8 @@ struct HardwareLCD: View {
 }
 
 struct SettingMenu: View {
+    @Environment(\.instrumentTheme) private var theme
+    private var palette: InstrumentPalette { theme.palette }
     let title: String
     @Binding var value: Int
     let values: [Int]
@@ -346,17 +414,17 @@ struct SettingMenu: View {
         } label: {
             HStack(spacing: 8) {
                 Text(title).font(.system(size: 9, weight: .semibold)).tracking(1)
-                    .foregroundColor(Finish.muted)
+                    .foregroundColor(palette.muted)
                 Spacer(minLength: 0)
                 Text(value == 0 ? "—" : "\(value)")
                     .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.86))
+                    .foregroundColor(palette.foreground.opacity(0.86))
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .bold)).foregroundColor(Finish.muted)
+                    .font(.system(size: 8, weight: .bold)).foregroundColor(palette.muted)
             }
             .padding(.horizontal, 12).frame(height: 38)
-            .background(Finish.ink.opacity(0.65), in: RoundedRectangle(cornerRadius: 9))
-            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(.white.opacity(0.06)))
+            .background(palette.recess, in: RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(palette.border.opacity(0.06)))
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
@@ -369,6 +437,7 @@ struct SettingMenu: View {
 @MainActor
 struct InstrumentView: View {
     @ObservedObject var model: Metronome
+    private var palette: InstrumentPalette { model.theme.palette }
     var showWidget: () -> Void
     @State private var dialStart: Int?
     var body: some View {
@@ -376,9 +445,9 @@ struct InstrumentView: View {
             HStack {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("fdm-3").font(.system(size: 18, weight: .bold, design: .rounded))
-                        .tracking(-0.5).foregroundColor(.white.opacity(0.92))
+                        .tracking(-0.5).foregroundColor(palette.foreground.opacity(0.92))
                     Text("METRONOME").font(.system(size: 8, weight: .medium))
-                        .tracking(1.8).foregroundColor(Finish.muted)
+                        .tracking(1.8).foregroundColor(palette.muted)
                 }
                 Spacer()
                 Button(action: showWidget) {
@@ -393,18 +462,18 @@ struct InstrumentView: View {
             HardwareLCD(model: model).frame(height: 154)
 
             HStack(spacing: 24) {
-                stepButton("minus", label: "Decrease tempo") { model.bpm -= 1 }
+                beatButton("minus", delta: -1)
                 ZStack {
                     ForEach(0..<31, id: \.self) { index in
-                        Capsule().fill(Color.white.opacity(index % 5 == 0 ? 0.32 : 0.10))
+                        Capsule().fill(palette.foreground.opacity(index % 5 == 0 ? 0.32 : 0.10))
                             .frame(width: 1.5, height: index % 5 == 0 ? 5 : 3)
                             .offset(y: -41)
                             .rotationEffect(.degrees(-135 + Double(index) * 9))
                     }
-                    Circle().fill(LinearGradient(colors: [Color(white: 0.29), Color(white: 0.15)],
+                    Circle().fill(LinearGradient(colors: [palette.dialTop, palette.dialBottom],
                                                  startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 68, height: 68)
-                        .overlay(Circle().strokeBorder(.white.opacity(0.14)))
+                        .overlay(Circle().strokeBorder(palette.border.opacity(0.14)))
                         .shadow(color: .black.opacity(0.5), radius: 3, y: 3)
                     Capsule().fill(Finish.orange).frame(width: 3, height: 12)
                         .offset(y: -23)
@@ -421,7 +490,7 @@ struct InstrumentView: View {
                 .accessibilityAdjustableAction { direction in
                     model.bpm += direction == .increment ? 1 : -1
                 }
-                stepButton("plus", label: "Increase tempo") { model.bpm += 1 }
+                beatButton("plus", delta: 1)
             }.frame(maxWidth: .infinity)
 
             HStack(spacing: 10) {
@@ -445,20 +514,21 @@ struct InstrumentView: View {
                     SettingMenu(title: "DIVISION", value: $model.subdivisions, values: Array(1...4))
                 }
                 soundSelector
+                themeSelector
                 HStack(spacing: 10) {
                     Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
-                        .font(.system(size: 12)).foregroundColor(Finish.muted).frame(width: 18)
+                        .font(.system(size: 12)).foregroundColor(palette.muted).frame(width: 18)
                     Slider(value: $model.volume, in: 0...1)
-                        .tint(Finish.lcd).controlSize(.small).accessibilityLabel("Volume")
+                        .tint(palette.sliderTint).controlSize(.small).accessibilityLabel("Volume")
                 }.padding(.horizontal, 4)
             }
             Text("SPACE play/stop · T tap · ↑↓ ±1 · ←→ ±10")
-                .font(.system(size: 9, design: .monospaced)).foregroundColor(Finish.muted.opacity(0.75))
+                .font(.system(size: 9, design: .monospaced)).foregroundColor(palette.muted.opacity(0.75))
         }
         .padding(18).frame(width: 320)
-        .background(LinearGradient(colors: [Finish.panel, Finish.ink],
+        .background(LinearGradient(colors: [palette.panel, palette.ink],
                                   startPoint: .topLeading, endPoint: .bottomTrailing))
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(model.theme.colorScheme)
         .alert("Audio unavailable", isPresented: Binding(
             get: { model.error != nil }, set: { if !$0 { model.error = nil } }
         )) {
@@ -483,18 +553,18 @@ struct InstrumentView: View {
             HStack(spacing: 8) {
                 Text("SOUND")
                     .font(.system(size: 9, weight: .semibold)).tracking(1)
-                    .foregroundColor(Finish.muted)
+                    .foregroundColor(palette.muted)
                 Spacer(minLength: 0)
                 Text((ClickVoice(rawValue: model.sound) ?? .click).name)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.white.opacity(0.86))
+                    .foregroundColor(palette.foreground.opacity(0.86))
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(Finish.muted)
+                    .foregroundColor(palette.muted)
             }
             .padding(.horizontal, 12).frame(height: 38)
-            .background(Finish.ink.opacity(0.65), in: RoundedRectangle(cornerRadius: 9))
-            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(.white.opacity(0.06)))
+            .background(palette.recess, in: RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(palette.border.opacity(0.06)))
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
@@ -503,13 +573,60 @@ struct InstrumentView: View {
         .accessibilityValue((ClickVoice(rawValue: model.sound) ?? .click).name)
     }
 
-    private func stepButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol).font(.system(size: 13, weight: .medium))
-                .frame(width: 40, height: 36)
+    private var themeSelector: some View {
+        Menu {
+            ForEach(InstrumentTheme.allCases, id: \.rawValue) { option in
+                Button {
+                    model.theme = option
+                } label: {
+                    if model.theme == option {
+                        Label(option.name, systemImage: "checkmark")
+                    } else {
+                        Text(option.name)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Text("THEME")
+                    .font(.system(size: 9, weight: .semibold)).tracking(1)
+                    .foregroundColor(palette.muted)
+                Spacer(minLength: 0)
+                Text(model.theme.name)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(palette.foreground.opacity(0.86))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(palette.muted)
+            }
+            .padding(.horizontal, 12).frame(height: 38)
+            .background(palette.recess, in: RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(palette.border.opacity(0.06)))
         }
-        .buttonStyle(InstrumentButtonStyle(radius: 18))
-        .accessibilityLabel(label)
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityLabel("Theme")
+        .accessibilityValue(model.theme.name)
+    }
+
+    private func beatButton(_ symbol: String, delta: Int) -> some View {
+        let atLimit = delta < 0 ? model.beats == 0 : model.beats == 9
+        return Button {
+            model.beats = min(9, max(0, model.beats + delta))
+        } label: {
+            VStack(spacing: 3) {
+                Image(systemName: symbol).font(.system(size: 13, weight: .medium))
+                Text("BEAT").font(.system(size: 8, weight: .semibold)).tracking(0.6)
+            }
+            .frame(width: 44, height: 42)
+        }
+        .buttonStyle(InstrumentButtonStyle(radius: 12))
+        .disabled(atLimit)
+        .opacity(atLimit ? 0.4 : 1)
+        .help(delta < 0 ? "Decrease beats per bar (0 = no accent)" : "Increase beats per bar")
+        .accessibilityLabel(delta < 0 ? "Decrease beats per bar" : "Increase beats per bar")
+        .accessibilityValue(model.beats == 0 ? "No accent" : "\(model.beats) beats per bar")
     }
 }
 
@@ -619,6 +736,7 @@ final class TempoPanel: NSPanel {
 @MainActor
 struct TempoWidget: View {
     @ObservedObject var model: Metronome
+    private var palette: InstrumentPalette { model.theme.palette }
     var showInstrument: () -> Void
     var body: some View {
         HStack(spacing: 8) {
@@ -626,7 +744,7 @@ struct TempoWidget: View {
             Spacer(minLength: 0)
             VStack(spacing: 6) {
                 Circle()
-                    .fill(model.playing ? Finish.transportRed : Color.white.opacity(0.18))
+                    .fill(model.playing ? Finish.transportRed : palette.foreground.opacity(0.18))
                     .frame(width: 9, height: 9)
                     .frame(width: 28, height: 28)
                     .help(model.playing ? "Metronome is playing" : "Metronome is stopped")
@@ -644,10 +762,10 @@ struct TempoWidget: View {
             }
         }
         .padding(.horizontal, 10).frame(width: 196, height: 82)
-        .background(LinearGradient(colors: [Finish.panel, Finish.ink],
+        .background(LinearGradient(colors: [palette.panel, palette.ink],
                                   startPoint: .topLeading, endPoint: .bottomTrailing),
                     in: RoundedRectangle(cornerRadius: 13))
-        .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(.white.opacity(0.10)))
+        .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(palette.border.opacity(0.10)))
         .contextMenu {
             Button(model.playing ? "Stop" : "Start") { model.toggle() }
             Button("Tap Tempo") { model.tap() }
@@ -657,8 +775,9 @@ struct TempoWidget: View {
             Divider()
             Button("Quit fdm-3") { model.stop(); NSApp.terminate(nil) }
         }
+        .environment(\.instrumentTheme, model.theme)
         .help("Drag to move. Click expand to return to fdm-3. Space starts or stops when focused.")
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(model.theme.colorScheme)
     }
 }
 
