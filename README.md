@@ -4,7 +4,7 @@ A compact macOS metronome with round beat lights, tap tempo, subdivisions, gap p
 
 <img src="docs/images/fdm.svg" alt="Dracula interface preview" width="396">
 
-<img src="docs/images/widget.svg" alt="Compact widget preview" width="244">
+<img src="docs/images/widget.svg" alt="Compact widget preview" width="281">
 
 ## Build and run
 
@@ -22,10 +22,10 @@ open dist/fdm.app
 - **Right column:** Widget, Settings, Accent, Mute, and Start/Stop.
 - **Settings:** Beats (1–9), Gap Length (1–8 bars), Sound, Theme, volume, and Tap.
 - **Space:** Start/Stop. **T:** tap. **M:** mute.
-- **↑/↓:** tempo ±1. **←/→:** tempo ±10. **Shift + ↑/↓:** beats.
+- **↑/↓:** tempo ±1. **←/→:** tempo ±10. **Shift + ↑/↓:** beats. **Shift + ←/→:** gap.
 - **Tab or &#92;:** switch to the floating widget.
 
-Completed beats stay filled. With Accent enabled, the first indicator uses the Play accent; other active beats use the current-beat color. The slim widget shows read-only BPM and beat progress, with a flat expand control.
+Completed beats stay filled. With Accent enabled, the first indicator uses the Play accent; other active beats use the current-beat color. Beat-count and accent edits appear immediately; their audio changes follow the boundaries below. The widget shows read-only BPM and beat progress, with a flat expand control.
 
 Tempo, sound, accent, and subdivision changes take effect on the next beat. Beats per bar and gap changes take effect on the next bar, without restarting playback.
 

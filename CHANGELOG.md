@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.2
+
+- Preview beat-count and accent edits immediately in both windows while preserving audio timing.
+- Add Shift + Left/Right to step Gap through Off, 1, 2, 4, and Random.
+- Replace the Gap-off dash with a smaller slashed-circle symbol.
+- Enlarge the widget and all its contents uniformly by 15%.
+
 ## 0.15.1
 
 - Use regular-weight BPM numerals in the main view, widget, and inline editor.

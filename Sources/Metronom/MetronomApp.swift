@@ -34,6 +34,12 @@ struct MetronomApp: App {
                 Button("Decrease Beats") { model.adjustBeats(by: -1) }
                     .keyboardShortcut(.downArrow, modifiers: [.shift])
                     .disabled(model.editingTempo || model.beats == 1)
+                Button("Increase Gap") { model.adjustGap(by: 1) }
+                    .keyboardShortcut(.rightArrow, modifiers: [.shift])
+                    .disabled(model.editingTempo || model.gap == GapCycle.random)
+                Button("Decrease Gap") { model.adjustGap(by: -1) }
+                    .keyboardShortcut(.leftArrow, modifiers: [.shift])
+                    .disabled(model.editingTempo || model.gap == 0)
             }
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Widget Mode") { windows.toggle() }
@@ -144,6 +150,12 @@ final class Metronome: ObservableObject {
         let next = min(Self.beatOptions.count - 1, max(0, index + delta))
         let value = Self.beatOptions[next]
         if value != beats { beats = value }
+    }
+    func adjustGap(by delta: Int) {
+        let index = GapCycle.options.firstIndex(of: gap) ?? 0
+        let next = min(GapCycle.options.count - 1, max(0, index + delta))
+        let value = GapCycle.options[next]
+        if gap != value { gap = value }
     }
     func toggle() { playing ? stop() : start() }
     func toggleMute() { volume = volume > 0 ? 0 : lastAudibleVolume }
@@ -772,6 +784,8 @@ final class WindowModes: ObservableObject {
                 switch event.keyCode {
                 case 126: self.model?.adjustBeats(by: 1)
                 case 125: self.model?.adjustBeats(by: -1)
+                case 124: self.model?.adjustGap(by: 1)
+                case 123: self.model?.adjustGap(by: -1)
                 default: return event
                 }
                 return nil
@@ -867,11 +881,15 @@ struct TempoWidget: View {
             .help("Return to fdm (Tab or \\)")
             .accessibilityLabel("Return to full fdm window")
         }
-        .padding(.horizontal, 10).frame(width: DisplayGeometry.widgetWidth, height: DisplayGeometry.widgetHeight)
+        .padding(.horizontal, 10)
+        .frame(width: DisplayGeometry.widgetWidth / DisplayGeometry.widgetScale,
+               height: DisplayGeometry.widgetHeight / DisplayGeometry.widgetScale)
         .background(LinearGradient(colors: palette.bodyColors,
                                   startPoint: .topLeading, endPoint: .bottomTrailing),
                     in: RoundedRectangle(cornerRadius: 13))
         .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(palette.neutral.opacity(0.10)))
+        .scaleEffect(DisplayGeometry.widgetScale)
+        .frame(width: DisplayGeometry.widgetWidth, height: DisplayGeometry.widgetHeight)
         .contextMenu {
             Button(model.playing ? "Stop" : "Start") { model.toggle() }
             Button("Tap Tempo") { model.tap() }

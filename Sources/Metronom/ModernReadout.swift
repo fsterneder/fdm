@@ -5,8 +5,9 @@ import TempoCore
 enum DisplayGeometry {
     static let width: CGFloat = 468
     static let mainHeight: CGFloat = 208
-    static let widgetWidth: CGFloat = 244
-    static let widgetHeight: CGFloat = 40
+    static let widgetScale: CGFloat = 1.15
+    static let widgetWidth: CGFloat = 244 * widgetScale
+    static let widgetHeight: CGFloat = 40 * widgetScale
 }
 
 @MainActor
@@ -28,8 +29,11 @@ struct ModernReadout: View {
             Text("\(model.gapBarsRemaining)/\(model.playbackGapBars)").monospacedDigit()
         } else if model.gap == GapCycle.random {
             Image(systemName: "shuffle")
+        } else if model.gap == 0 {
+            Image(systemName: "circle.slash")
+                .font(.system(size: 26, weight: .regular)).opacity(0.65)
         } else {
-            Text(model.gap == 0 ? "—" : String(model.gap)).monospacedDigit()
+            Text(String(model.gap)).monospacedDigit()
         }
     }
     private var gapDescription: String {
@@ -175,10 +179,11 @@ private struct BeatLights: View {
     let spacing: CGFloat
     var outlineOpacity: Double = 1
     var body: some View {
-        let count = max(1, model.playbackBeats)
+        // Preview meter edits immediately while audio completes the current bar.
+        let count = max(1, model.beats)
         let playing = model.playing
-        let accent = model.playbackAccent
-        let current = model.currentBeat
+        let accent = model.accent
+        let current = model.currentBeat >= 0 ? model.currentBeat % count : -1
         let beatTime = model.beatTime
         let bpm = model.playbackBPM
         let palette = model.theme.palette
