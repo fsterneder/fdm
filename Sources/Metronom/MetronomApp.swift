@@ -7,10 +7,11 @@ import TempoCore
 @main
 @MainActor
 struct MetronomApp: App {
+    @NSApplicationDelegateAdaptor(AppLifecycle.self) private var lifecycle
     @StateObject private var model = Metronome()
     @StateObject private var windows = WindowModes()
     var body: some Scene {
-        WindowGroup("fdm-3") {
+        Window("fdm-3", id: "instrument") {
             InstrumentView(model: model, showWidget: { windows.showWidget() })
                 .background(WindowBridge(windows: windows, model: model))
         }
@@ -31,6 +32,11 @@ struct MetronomApp: App {
 }
 
 @MainActor
+final class AppLifecycle: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+}
+
+@MainActor
 final class Metronome: ObservableObject {
     @Published var bpm: Int { didSet {
         let bounded = Tempo.clamp(bpm)
@@ -46,6 +52,8 @@ final class Metronome: ObservableObject {
     } }
     @Published private(set) var playing = false
     @Published private(set) var currentBeat = -1
+    @Published private(set) var beatTime: TimeInterval = 0
+    @Published private(set) var beatNumber = 0
     @Published var error: String?
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
@@ -82,7 +90,7 @@ final class Metronome: ObservableObject {
             generation = UUID()
             buffers = (0...2).map { makeClick(kind: $0) }
             playing = true
-            nextFrame = 0; tick = 0; currentBeat = -1
+            nextFrame = 0; tick = 0; currentBeat = -1; beatTime = 0; beatNumber = 0
             activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .idleSystemSleepDisabled], reason: "Playing metronome")
             // Audio sample times determine every click; the timer only replenishes the queue.
             schedule(until: 24_000)
@@ -98,7 +106,7 @@ final class Metronome: ObservableObject {
     }
     func stop() {
         generation = UUID(); timer?.invalidate(); timer = nil
-        player.stop(); playing = false; currentBeat = -1
+        player.stop(); playing = false; currentBeat = -1; beatTime = 0
         if let activity { ProcessInfo.processInfo.endActivity(activity); self.activity = nil }
     }
     private func refill() {
@@ -119,6 +127,8 @@ final class Metronome: ObservableObject {
                 if mainBeat {
                     Task { @MainActor in
                         guard let self, self.playing, self.generation == run else { return }
+                        self.beatTime = Date.timeIntervalSinceReferenceDate
+                        self.beatNumber &+= 1
                         self.currentBeat = beat
                     }
                 }
@@ -215,65 +225,72 @@ struct HardwareLCD: View {
     var compact = false
     private let ink = Color(red: 0.08, green: 0.12, blue: 0.095)
     var body: some View {
-        Canvas { context, size in
-            let logical = compact ? CGSize(width: 140, height: 66) : CGSize(width: 280, height: 154)
-            context.scaleBy(x: size.width / logical.width, y: size.height / logical.height)
-            func label(_ text: String, x: CGFloat, y: CGFloat, size: CGFloat = 10) {
-                context.draw(Text(text).font(.system(size: size, weight: .medium))
-                    .foregroundColor(ink), at: CGPoint(x: x, y: y), anchor: .topLeading)
-            }
-            func number(_ value: Int, places: Int, x: CGFloat, y: CGFloat, height: CGFloat) {
-                let chars = Array(String(value))
-                let advance = height * 0.59
-                for index in 0..<places {
-                    let source = index - (places - chars.count)
-                    if source >= 0, source < chars.count, let digit = chars[source].wholeNumberValue {
-                        context.fill(LCDSegments.path(digit: digit,
-                            origin: CGPoint(x: x + CGFloat(index) * advance, y: y),
-                            height: height), with: .color(ink))
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !model.playing || compact)) { timeline in
+            Canvas { context, size in
+                let logical = compact ? CGSize(width: 140, height: 66) : CGSize(width: 280, height: 154)
+                context.scaleBy(x: size.width / logical.width, y: size.height / logical.height)
+                func label(_ text: String, x: CGFloat, y: CGFloat, size: CGFloat = 10) {
+                    context.draw(Text(text).font(.system(size: size, weight: .medium))
+                        .foregroundColor(ink), at: CGPoint(x: x, y: y), anchor: .topLeading)
+                }
+                func number(_ value: Int, places: Int, x: CGFloat, y: CGFloat, height: CGFloat) {
+                    let chars = Array(String(value))
+                    let advance = height * 0.59
+                    for index in 0..<places {
+                        let source = index - (places - chars.count)
+                        if source >= 0, source < chars.count, let digit = chars[source].wholeNumberValue {
+                            context.fill(LCDSegments.path(digit: digit,
+                                origin: CGPoint(x: x + CGFloat(index) * advance, y: y),
+                                height: height), with: .color(ink))
+                        }
                     }
                 }
-            }
-            if compact {
-                number(model.bpm, places: 3, x: 9, y: 7, height: 38)
-                label("TEMPO", x: 87, y: 32, size: 7)
-            } else {
-                number(model.bpm, places: 3, x: 69, y: 15, height: 70)
-                number(model.beats, places: 1, x: 227, y: 15, height: 70)
-                label("TEMPO", x: 9, y: 69, size: 11)
-                label("BEAT", x: 188, y: 69, size: 11)
-                label("VOICE", x: 47, y: 105, size: 10)
-                number(model.sound + 1, places: 1, x: 101, y: 93, height: 29)
-                // Printed metronome symbol, rather than a modern status light.
-                var symbol = Path()
-                symbol.move(to: CGPoint(x: 11, y: 115))
-                symbol.addLine(to: CGPoint(x: 15, y: 97))
-                symbol.addLine(to: CGPoint(x: 23, y: 97))
-                symbol.addLine(to: CGPoint(x: 27, y: 115))
-                symbol.closeSubpath()
-                symbol.move(to: CGPoint(x: 18, y: 111))
-                symbol.addLine(to: CGPoint(x: 27, y: 95))
-                context.stroke(symbol, with: .color(ink), lineWidth: 1.8)
-            }
-            let count = max(1, model.beats)
-            let width: CGFloat = compact ? 9 : 18
-            let height: CGFloat = compact ? 9 : 19
-            let spacing: CGFloat = compact ? 4 : 7
-            let y: CGFloat = compact ? 52 : 127
-            for index in 0..<count {
-                let x = CGFloat(index) * (width + spacing) + (compact ? 11 : 10)
-                var triangle = Path()
-                triangle.move(to: CGPoint(x: x, y: y))
-                triangle.addLine(to: CGPoint(x: x + width, y: y + height / 2))
-                triangle.addLine(to: CGPoint(x: x, y: y + height))
-                triangle.closeSubpath()
-                // The hardware fills the markers up to the current beat.
-                if model.currentBeat >= 0 && index <= model.currentBeat {
-                    context.fill(triangle, with: .color(ink))
+                if compact {
+                    number(model.bpm, places: 3, x: 9, y: 7, height: 38)
+                    label("TEMPO", x: 87, y: 32, size: 7)
+                } else {
+                    number(model.bpm, places: 3, x: 65, y: 16, height: 64)
+                    number(model.beats, places: 1, x: 235, y: 16, height: 64)
+                    label("TEMPO", x: 9, y: 67, size: 11)
+                    label("BEAT", x: 194, y: 67, size: 11)
+                    label("VOICE", x: 47, y: 105, size: 10)
+                    number(model.sound + 1, places: 1, x: 101, y: 93, height: 29)
+                    // The pendulum changes direction on every audible pulse, including unaccented mode.
+                    var symbol = Path()
+                    symbol.move(to: CGPoint(x: 11, y: 115))
+                    symbol.addLine(to: CGPoint(x: 15, y: 97))
+                    symbol.addLine(to: CGPoint(x: 23, y: 97))
+                    symbol.addLine(to: CGPoint(x: 27, y: 115))
+                    symbol.closeSubpath()
+                    let elapsed = max(0, timeline.date.timeIntervalSinceReferenceDate - model.beatTime)
+                    let phase = min(1, elapsed / (60 / Double(model.bpm)))
+                    let direction: Double = model.beatNumber.isMultiple(of: 2) ? -1 : 1
+                    let angle = model.playing && model.beatTime > 0
+                        ? direction * cos(phase * .pi) * 0.5 : 0
+                    symbol.move(to: CGPoint(x: 19, y: 112))
+                    symbol.addLine(to: CGPoint(x: 19 + sin(angle) * 21, y: 112 - cos(angle) * 21))
+                    context.stroke(symbol, with: .color(ink), lineWidth: 1.8)
                 }
-                context.stroke(triangle, with: .color(ink), lineWidth: compact ? 0.8 : 1.2)
+                let count = max(1, model.beats)
+                let width: CGFloat = compact ? 9 : 18
+                let height: CGFloat = compact ? 9 : 19
+                let spacing: CGFloat = compact ? 4 : 7
+                let y: CGFloat = compact ? 52 : 127
+                for index in 0..<count {
+                    let x = CGFloat(index) * (width + spacing) + (compact ? 11 : 10)
+                    var triangle = Path()
+                    triangle.move(to: CGPoint(x: x, y: y))
+                    triangle.addLine(to: CGPoint(x: x + width, y: y + height / 2))
+                    triangle.addLine(to: CGPoint(x: x, y: y + height))
+                    triangle.closeSubpath()
+                    // The hardware fills the markers up to the current beat.
+                    if model.currentBeat >= 0 && index <= model.currentBeat {
+                        context.fill(triangle, with: .color(ink))
+                    }
+                    context.stroke(triangle, with: .color(ink), lineWidth: compact ? 0.8 : 1.2)
+                }
             }
-        }
+            }
         .background(
             LinearGradient(colors: [
                 Color(red: 0.64, green: 0.69, blue: 0.60),
@@ -480,6 +497,7 @@ final class WindowModes: ObservableObject {
             Task { @MainActor in
                 self?.model?.stop()
                 self?.widget?.orderOut(nil)
+                NSApp.terminate(nil)
             }
         }
         guard keyMonitor == nil else { return }
@@ -566,6 +584,8 @@ struct TempoWidget: View {
             Divider()
             Button("Show Full fdm-3") { showInstrument() }
                 .keyboardShortcut("m", modifiers: [.command, .shift])
+            Divider()
+            Button("Quit fdm-3") { model.stop(); NSApp.terminate(nil) }
         }
         .help("Drag to move. Click expand to return to fdm-3. Space starts or stops when focused.")
         .preferredColorScheme(.dark)
