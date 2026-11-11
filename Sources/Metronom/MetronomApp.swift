@@ -436,11 +436,7 @@ struct InstrumentView: View {
                     SettingMenu(title: "BEATS", value: $model.beats, values: Array(0...9))
                     SettingMenu(title: "DIVISION", value: $model.subdivisions, values: Array(1...4))
                 }
-                VStack(spacing: 4) {
-                    soundRow(Array(ClickVoice.allCases.prefix(3)))
-                    soundRow(Array(ClickVoice.allCases.suffix(2)))
-                }
-                .padding(3).background(Finish.ink.opacity(0.65), in: RoundedRectangle(cornerRadius: 10))
+                soundSelector
                 HStack(spacing: 10) {
                     Image(systemName: model.volume == 0 ? "speaker.slash" : "speaker.wave.2")
                         .font(.system(size: 12)).foregroundColor(Finish.muted).frame(width: 18)
@@ -462,22 +458,35 @@ struct InstrumentView: View {
         } message: { Text(model.error ?? "") }
     }
 
-    private func soundRow(_ voices: [ClickVoice]) -> some View {
-        HStack(spacing: 4) {
-            ForEach(voices, id: \.rawValue) { voice in
-                Button { model.sound = voice.rawValue } label: {
-                    Text(voice.name)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(model.sound == voice.rawValue ? .white.opacity(0.92) : Finish.muted)
-                        .frame(maxWidth: .infinity).frame(height: 29)
-                        .background(model.sound == voice.rawValue ? Color.white.opacity(0.10) : .clear,
-                                    in: RoundedRectangle(cornerRadius: 7))
+    private var soundSelector: some View {
+        Menu {
+            Picker("Sound", selection: $model.sound) {
+                ForEach(ClickVoice.allCases, id: \.rawValue) { voice in
+                    Text(voice.name).tag(voice.rawValue)
                 }
-                .buttonStyle(.plain)
-                .accessibilityValue(model.sound == voice.rawValue ? "Selected" : "")
-                .help("Voice \(voice.rawValue + 1): \(voice.name)")
             }
+        } label: {
+            HStack(spacing: 8) {
+                Text("SOUND")
+                    .font(.system(size: 9, weight: .semibold)).tracking(1)
+                    .foregroundColor(Finish.muted)
+                Spacer(minLength: 0)
+                Text((ClickVoice(rawValue: model.sound) ?? .click).name)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.white.opacity(0.86))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(Finish.muted)
+            }
+            .padding(.horizontal, 12).frame(height: 38)
+            .background(Finish.ink.opacity(0.65), in: RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(.white.opacity(0.06)))
         }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityLabel("Sound")
+        .accessibilityValue((ClickVoice(rawValue: model.sound) ?? .click).name)
     }
 
     private func stepButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
