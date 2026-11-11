@@ -27,7 +27,7 @@ struct ModernReadout: View {
             Image(systemName: "shuffle")
         } else if model.gap == 0 {
             Image(systemName: "circle.slash")
-                .font(.system(size: 26, weight: .regular)).opacity(0.65)
+                .font(.system(size: 26, weight: .regular))
         } else {
             Text(String(model.gap)).monospacedDigit()
         }
@@ -249,7 +249,7 @@ private struct BeatLights: View {
                     let color = hasAccent ? palette.action : (isCurrent ? palette.playingBeat : palette.neutral)
                     Circle()
                         .fill(color)
-                        .mask(alignment: hasAccent ? .top : .bottom) {
+                        .mask(alignment: .bottom) {
                             Rectangle().frame(height: silent ? diameter / 2 : diameter)
                         }
                         .opacity(isCurrent || isPlayed ? 1 : 0)

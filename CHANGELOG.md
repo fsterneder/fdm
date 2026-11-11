@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.3
+
+- Keep the Gap-off symbol at the same full theme color as the other Gap options.
+- Fill every silent widget beat on the lower half, whether accented or not.
+
 ## 0.18.2
 
 - Keep accented beats solid accent color while current, replacing the two-color split in both views.
