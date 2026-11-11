@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.0
+
+- Make the widget BPM read-only; BPM dragging remains available in the main window.
+
+- Separate Accent Yes/No from Beats (1–9); migrate legacy No Accent to four beats with Accent off.
+- Add Gap Length from 1–8 silent beats, independently of how often a gap occurs.
+- Keep subdivisions muted for every silent beat and choose random audible runs once per cycle.
+- Replace the main subdivision readout with remaining/total silent beats, then restore it after the gap.
+- Persist both new settings and keep visual beat counting independent of accent.
+
 ## 0.10.2
 
 - Reduce the main window from 376 to 308 points tall by tightening vertical spacing and the metric row.

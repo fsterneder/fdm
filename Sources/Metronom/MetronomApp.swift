@@ -33,7 +33,7 @@ struct MetronomApp: App {
                     .disabled(model.editingTempo || model.beats == 9)
                 Button("Decrease Beats") { model.adjustBeats(by: -1) }
                     .keyboardShortcut(.downArrow, modifiers: [.shift])
-                    .disabled(model.editingTempo || model.beats == 0)
+                    .disabled(model.editingTempo || model.beats == 1)
             }
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Widget Mode") { windows.toggle() }
@@ -52,13 +52,19 @@ final class AppLifecycle: NSObject, NSApplicationDelegate {
 
 @MainActor
 final class Metronome: ObservableObject {
-    static let beatOptions = [0] + Array(2...9)
+    static let beatOptions = Array(1...9)
     @Published var bpm: Int { didSet {
         let bounded = Tempo.clamp(bpm)
         if bpm != bounded { bpm = bounded; return }
         UserDefaults.standard.set(bpm, forKey: "bpm"); restart()
     } }
     @Published var beats: Int { didSet { UserDefaults.standard.set(beats, forKey: "beats"); restart() } }
+    @Published var accent: Bool {
+        didSet { UserDefaults.standard.set(accent, forKey: "accent"); restart() }
+    }
+    @Published var gapLength: Int {
+        didSet { UserDefaults.standard.set(gapLength, forKey: "gapLength"); restart() }
+    }
     @Published var subdivisions: Int { didSet { UserDefaults.standard.set(subdivisions, forKey: "subdivisions"); restart() } }
     @Published var sound: Int { didSet { UserDefaults.standard.set(sound, forKey: "sound"); restart() } }
     @Published var gap: Int {
@@ -82,7 +88,8 @@ final class Metronome: ObservableObject {
     } }
     @Published private(set) var playing = false
     @Published private(set) var currentBeat = -1
-    @Published private(set) var inSilentBar = false
+    @Published private(set) var gapBeatsRemaining = 0
+    var inSilentBar: Bool { gapBeatsRemaining > 0 }
     @Published private(set) var beatTime: TimeInterval = 0
     @Published private(set) var beatNumber = 0
     @Published var error: String?
@@ -103,8 +110,12 @@ final class Metronome: ObservableObject {
         let defaults = UserDefaults.standard
         defaults.register(defaults: ["bpm": 120, "beats": 4, "subdivisions": 1, "sound": 0, "volume": 0.65])
         bpm = Tempo.clamp(defaults.integer(forKey: "bpm"))
-        let savedBeats = min(9, max(0, defaults.integer(forKey: "beats")))
-        beats = savedBeats == 1 ? 0 : savedBeats
+        let pattern = BeatPattern(savedBeats: defaults.integer(forKey: "beats"),
+                                  savedAccent: defaults.object(forKey: "accent") as? Bool)
+        beats = pattern.beats
+        accent = pattern.accent
+        let savedLength = defaults.object(forKey: "gapLength") as? Int
+        gapLength = min(8, max(1, savedLength ?? pattern.beats))
         subdivisions = min(4, max(1, defaults.integer(forKey: "subdivisions")))
         sound = min(ClickVoice.allCases.count - 1, max(0, defaults.integer(forKey: "sound")))
         let savedVolume = min(1, max(0, defaults.double(forKey: "volume")))
@@ -117,6 +128,10 @@ final class Metronome: ObservableObject {
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: format)
         player.volume = Float(volume)
+        // Persist the migration so a new one-beat meter is never mistaken for legacy No Accent.
+        defaults.set(pattern.beats, forKey: "beats")
+        defaults.set(pattern.accent, forKey: "accent")
+        defaults.set(gapLength, forKey: "gapLength")
     }
     func adjustBeats(by delta: Int) {
         let index = Self.beatOptions.firstIndex(of: beats) ?? 0
@@ -143,7 +158,7 @@ final class Metronome: ObservableObject {
                 return silence
             }
             playing = true
-            inSilentBar = false
+            gapBeatsRemaining = 0
             gapSequence = GapSequence()
             nextFrame = 0; tick = 0; currentBeat = -1; beatTime = 0; beatNumber = 0
             activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .idleSystemSleepDisabled], reason: "Playing metronome")
@@ -161,7 +176,7 @@ final class Metronome: ObservableObject {
     }
     func stop() {
         generation = UUID(); timer?.invalidate(); timer = nil
-        player.stop(); playing = false; currentBeat = -1; beatTime = 0; inSilentBar = false
+        player.stop(); playing = false; currentBeat = -1; beatTime = 0; gapBeatsRemaining = 0
         if let activity { ProcessInfo.processInfo.endActivity(activity); self.activity = nil }
     }
     private func refill() {
@@ -175,9 +190,10 @@ final class Metronome: ObservableObject {
         let run = generation
         while nextFrame < horizon {
             let mainBeat = tick % subdivisions == 0
-            let beat = beats == 0 ? 0 : (tick / subdivisions) % beats
-            let kind = !mainBeat ? 2 : (beats > 0 && beat == 0 ? 0 : 1)
-            let silent = gapSequence.isSilent(tick: tick, beats: beats, subdivisions: subdivisions, audibleBars: gap)
+            let beat = (tick / subdivisions) % beats
+            let kind = BeatPattern.soundKind(beat: beat, isMainBeat: mainBeat, accent: accent)
+            let silent = gapSequence.isSilent(tick: tick, beats: beats, subdivisions: subdivisions, audibleBars: gap, silentBeats: gapLength)
+            let remaining = gapSequence.silentBeatsRemaining
             let buffer = silent ? silentBuffers[kind] : buffers[kind]
             let frame = AVAudioFramePosition(nextFrame.rounded())
             player.scheduleBuffer(buffer, at: AVAudioTime(sampleTime: frame, atRate: format.sampleRate), options: [], completionCallbackType: .dataPlayedBack) { [weak self] _ in
@@ -186,7 +202,7 @@ final class Metronome: ObservableObject {
                         guard let self, self.playing, self.generation == run else { return }
                         self.beatTime = Date.timeIntervalSinceReferenceDate
                         self.beatNumber &+= 1
-                        self.inSilentBar = silent
+                        self.gapBeatsRemaining = remaining
                         self.currentBeat = beat
                     }
                 }
@@ -651,6 +667,10 @@ struct InstrumentSettings: View {
                     gapSelector
                 }
                 HStack(spacing: 8) {
+                    accentSelector
+                    gapLengthSelector
+                }
+                HStack(spacing: 8) {
                     soundSelector
                     themeSelector
                 }
@@ -677,13 +697,39 @@ struct InstrumentSettings: View {
     private var beatSelector: some View {
         ChoiceDropdown(
             title: "BEATS", selectedID: String(model.beats),
-            selectedLabel: model.beats == 0 ? "No Accent" : String(model.beats),
+            selectedLabel: String(model.beats),
             options: Metronome.beatOptions.map {
-                DropdownChoice(id: String($0), label: $0 == 0 ? "No Accent" : String($0))
+                DropdownChoice(id: String($0), label: String($0))
             }
         ) { id in
             if let beats = Int(id), Metronome.beatOptions.contains(beats), model.beats != beats {
                 model.beats = beats
+            }
+        }
+    }
+
+
+    private var accentSelector: some View {
+        ChoiceDropdown(
+            title: "ACCENT", selectedID: model.accent ? "yes" : "no",
+            selectedLabel: model.accent ? "Yes" : "No",
+            options: [DropdownChoice(id: "yes", label: "Yes"), DropdownChoice(id: "no", label: "No")]
+        ) { id in
+            let value = id == "yes"
+            if model.accent != value { model.accent = value }
+        }
+    }
+
+    private var gapLengthSelector: some View {
+        ChoiceDropdown(
+            title: "GAP LENGTH", selectedID: String(model.gapLength),
+            selectedLabel: "\(model.gapLength) \(model.gapLength == 1 ? "beat" : "beats")",
+            options: GapCycle.lengthOptions.map {
+                DropdownChoice(id: String($0), label: "\($0) \($0 == 1 ? "beat" : "beats")")
+            }
+        ) { id in
+            if let length = Int(id), GapCycle.lengthOptions.contains(length), model.gapLength != length {
+                model.gapLength = length
             }
         }
     }
@@ -879,7 +925,7 @@ struct TempoWidget: View {
             Button("Quit fdm-3") { model.stop(); NSApp.terminate(nil) }
         }
         .environment(\.instrumentTheme, model.theme)
-        .help("Drag the background to move. Drag BPM up/down to adjust. Click expand to return to fdm-3.")
+        .help("Drag the background to move. Click expand to return to fdm-3.")
         .preferredColorScheme(model.theme.colorScheme)
     }
 }

@@ -33,13 +33,13 @@ struct ModernReadout: View {
                     }
                     .frame(width: 166 * scale)
                     VStack(spacing: 2 * scale) {
-                        Text(model.inSilentBar ? "GAP" : subdivisionText)
+                        Text(model.inSilentBar ? "\(model.gapBeatsRemaining)/\(model.gapLength)" : subdivisionText)
                             .font(.system(size: (model.inSilentBar ? 38 : 42) * scale, weight: .regular))
                             .monospacedDigit()
                             .foregroundColor(model.inSilentBar ? palette.neutral : palette.beat)
                             .minimumScaleFactor(0.6).lineLimit(1)
                             .frame(width: 158 * scale, height: 68 * scale)
-                        caption(model.inSilentBar ? "SILENT BAR" : "SUBDIVISION", scale: scale)
+                        caption(model.inSilentBar ? "SILENT BEATS" : "SUBDIVISION", scale: scale)
                     }
                     .frame(width: 166 * scale)
                     .overlay {
@@ -52,8 +52,8 @@ struct ModernReadout: View {
                     }
                     .help("Drag up/down to change subdivision.")
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(model.inSilentBar ? "Silent practice bar" : "Subdivision")
-                    .accessibilityValue(model.inSilentBar ? "Gap" : "\(model.subdivisions) clicks per beat")
+                    .accessibilityLabel(model.inSilentBar ? "Silent beats remaining" : "Subdivision")
+                    .accessibilityValue(model.inSilentBar ? "\(model.gapBeatsRemaining) of \(model.gapLength) beats remaining" : "\(model.subdivisions) clicks per beat")
                 }
                 .frame(height: 84 * scale)
                 BeatLights(model: model, width: DisplayGeometry.width * scale, maxDiameter: 68 * scale, spacing: 20 * scale)
@@ -130,7 +130,6 @@ private struct BeatLights: View {
     let spacing: CGFloat
     var body: some View {
         let count = max(1, model.beats)
-        let noAccent = model.beats == 0
         let playing = model.playing
         let current = model.currentBeat
         let beatTime = model.beatTime
@@ -138,19 +137,19 @@ private struct BeatLights: View {
         let palette = model.theme.palette
         let gap = count > 4 ? spacing / 2 : spacing
         let diameter = min(maxDiameter, (width - CGFloat(count - 1) * gap) / CGFloat(count))
-        return TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !noAccent || !playing)) { timeline in
+        return TimelineView(.animation(minimumInterval: 1.0 / 30, paused: count != 1 || !playing)) { timeline in
             let elapsed = max(0, timeline.date.timeIntervalSinceReferenceDate - beatTime)
             let pulse = playing && current >= 0 && elapsed < min(0.14, (60 / Double(bpm)) * 0.45)
             HStack(spacing: gap) {
                 ForEach(0..<count, id: \.self) { index in
-                    let isCurrent = noAccent ? pulse : playing && current == index
-                    let isPlayed = !noAccent && playing && current >= 0 && index < current
+                    let isCurrent = count == 1 ? pulse : playing && current == index
+                    let isPlayed = count > 1 && playing && current >= 0 && index < current
                     let color = isCurrent ? palette.playingBeat : palette.neutral
                     Circle()
                         .fill(isCurrent || isPlayed ? color : Color.clear)
                         .overlay(Circle().strokeBorder(color, lineWidth: min(2.5, max(1.25, diameter * 0.04))))
                         .frame(width: diameter, height: diameter)
-                        .accessibilityLabel(noAccent ? "Unaccented beat" : "Beat \(index + 1) of \(count)")
+                        .accessibilityLabel("Beat \(index + 1) of \(count)")
                         .accessibilityValue(isCurrent ? "Current" : (isPlayed ? "Played" : "Upcoming"))
                 }
             }
@@ -166,7 +165,12 @@ struct CompactReadout: View {
     var body: some View {
         HStack(spacing: 8) {
             HStack(spacing: 3) {
-                TempoValue(model: model, fontSize: 24, width: 52, height: 32)
+                Text(String(model.bpm))
+                    .font(.system(size: 24, weight: .semibold)).monospacedDigit()
+                    .foregroundColor(model.theme.palette.tempo)
+                    .frame(width: 52, height: 32)
+                    .accessibilityLabel("Tempo")
+                    .accessibilityValue("\(model.bpm) beats per minute")
                 Text("bpm").font(.system(size: 9, weight: .medium))
                     .foregroundColor(model.theme.palette.neutral.opacity(0.65))
                     .frame(width: 21).offset(y: 5)
