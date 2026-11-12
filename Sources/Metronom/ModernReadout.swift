@@ -68,7 +68,7 @@ struct ModernReadout: View {
                             onSet: { value in
                                 let subdivision = Subdivision.options[value]
                                 if model.subdivisions != subdivision { model.subdivisions = subdivision }
-                            }, onDoubleClick: nil, onDragState: { model.editingTempo = $0 })
+                            }, onDragState: { model.editingTempo = $0 })
                             .frame(width: column, height: 112 * scale)
                             .accessibilityHidden(true)
                     }
@@ -87,7 +87,7 @@ struct ModernReadout: View {
                     .frame(width: column)
                     .overlay {
                         ValueDragArea(value: gapIndex, bounds: 0...(GapCycle.options.count - 1), pointsPerStep: 12,
-                            onSet: { setGap(index: $0) }, onDoubleClick: nil,
+                            onSet: { setGap(index: $0) },
                             onDragState: { model.editingTempo = $0 })
                             .frame(width: column, height: 112 * scale)
                             .accessibilityHidden(true)
@@ -172,7 +172,6 @@ struct TempoValue: View {
     let fontSize: CGFloat
     let width: CGFloat
     let height: CGFloat
-    @State private var editingTempo = false
     private var palette: InstrumentPalette { model.theme.palette }
     var body: some View {
         ZStack {
@@ -180,41 +179,21 @@ struct TempoValue: View {
                 .font(.system(size: fontSize, weight: .regular))
                 .monospacedDigit().foregroundColor(palette.tempo)
                 .minimumScaleFactor(0.7).lineLimit(1)
-                .opacity(editingTempo ? 0 : 1)
-            if editingTempo {
-                InlineTempoField(bpm: model.bpm, color: palette.tempo, fontSize: fontSize,
-                    onSet: { value in
-                        if model.bpm != value { model.bpm = value }
-                        editingTempo = false
-                        model.editingTempo = false
-                    },
-                    onCancel: {
-                        editingTempo = false
-                        model.editingTempo = false
-                    })
-                    .frame(width: width, height: height)
-            } else {
-                ValueDragArea(value: model.bpm, bounds: 30...252, pointsPerStep: 3,
-                    onSet: { value in if model.bpm != value { model.bpm = value } },
-                    onDoubleClick: { editingTempo = true; model.editingTempo = true },
-                    onDragState: { model.editingTempo = $0 })
-                    .frame(width: width, height: height)
-                    .accessibilityHidden(true)
-            }
+            ValueDragArea(value: model.bpm, bounds: 30...252, pointsPerStep: 3,
+                onSet: { value in if model.bpm != value { model.bpm = value } },
+                onDragState: { model.editingTempo = $0 })
+                .frame(width: width, height: height)
+                .accessibilityHidden(true)
         }
         .frame(width: width, height: height)
-        .accessibilityElement(children: editingTempo ? .contain : .ignore)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("Tempo")
         .accessibilityValue("\(model.bpm) beats per minute")
-        .accessibilityHint("Drag up or down to change tempo, or double-click to type.")
+        .accessibilityHint("Drag up or down to change tempo.")
         .accessibilityAdjustableAction { direction in
             model.bpm = Tempo.clamp(model.bpm + (direction == .increment ? 1 : -1))
         }
-        .help("Drag up/down to adjust BPM. Double-click to type.")
-        .onDisappear {
-            if editingTempo { model.editingTempo = false }
-            editingTempo = false
-        }
+        .help("Drag up/down to adjust BPM.")
     }
 }
 
@@ -297,7 +276,6 @@ private struct ValueDragArea: NSViewRepresentable {
     let bounds: ClosedRange<Int>
     let pointsPerStep: Double
     let onSet: (Int) -> Void
-    let onDoubleClick: (() -> Void)?
     let onDragState: (Bool) -> Void
     func makeNSView(context: Context) -> ValueDragView {
         let view = ValueDragView()
@@ -310,7 +288,6 @@ private struct ValueDragArea: NSViewRepresentable {
         view.valueBounds = bounds
         view.pointsPerStep = pointsPerStep
         view.onSet = onSet
-        view.onDoubleClick = onDoubleClick
         view.onDragState = onDragState
     }
     static func dismantleNSView(_ view: ValueDragView, coordinator: ()) { view.cancelInteraction() }
@@ -322,7 +299,6 @@ private final class ValueDragView: NSView {
     var valueBounds = 30...252
     var pointsPerStep: Double = 3
     var onSet: ((Int) -> Void)?
-    var onDoubleClick: (() -> Void)?
     var onDragState: ((Bool) -> Void)?
     private var scrubber: ValueScrubber?
     private var pressX: CGFloat = 0
@@ -354,9 +330,7 @@ private final class ValueDragView: NSView {
     }
     override func mouseUp(with event: NSEvent) {
         guard scrubber != nil else { return }
-        let wasDragging = dragging
         cancelInteraction()
-        if !wasDragging && event.clickCount == 2 { onDoubleClick?() }
     }
     func cancelInteraction() {
         if dragging { onDragState?(false) }

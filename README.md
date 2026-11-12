@@ -18,10 +18,10 @@ open dist/fdm.app
 
 ## Controls
 
-- **BPM / subdivision / gap:** drag up/down. Gap cycles Off, 1, 2, 4, Random audible bars. Double-click BPM for optional numeric entry.
+- **BPM / subdivision / gap:** drag up/down. Gap cycles Off, 1, 2, 4, Random audible bars.
 - **Right column:** Widget, Settings, Accent, Mute, and Start/Stop.
 - **Settings:** Beats (1–7), Gap Length (1–8 bars), Sound, Theme, volume, and Tap.
-- **Space:** Start/Stop. **T:** tap. **M:** mute.
+- **Space:** Start/Stop. **T:** tap. **M:** mute. **A:** accent.
 - **↑/↓:** tempo ±1. **←/→:** tempo ±10. **Shift + ↑/↓:** beats. **Shift + ←/→:** gap. Shift shortcuts work only in the main window.
 - **Tab or &#92;:** switch to the floating widget.
 

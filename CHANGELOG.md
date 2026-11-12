@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.4
+
+- Remove double-click BPM typing and its inline editor; keep drag and keyboard adjustment.
+- Add A to toggle first-beat Accent in the main window and widget, with one toggle per press.
+- Suppress the shortcut while editing or dragging a value and show it in the Accent tooltip.
+
 ## 0.18.3
 
 - Keep the Gap-off symbol at the same full theme color as the other Gap options.

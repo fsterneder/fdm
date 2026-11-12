@@ -24,6 +24,7 @@ struct MetronomApp: App {
                 Button("Start / Stop") { model.toggle() }.keyboardShortcut(.space, modifiers: []).disabled(model.editingTempo)
                 Button("Tap Tempo") { model.tap() }.keyboardShortcut("t", modifiers: []).disabled(model.editingTempo)
                 Button("Mute / Unmute") { model.toggleMute() }.keyboardShortcut("m", modifiers: []).disabled(model.editingTempo)
+                Button("Accent On / Off") { model.accent.toggle() }.keyboardShortcut("a", modifiers: []).disabled(model.editingTempo)
                 Button("Faster") { model.bpm += 1 }.keyboardShortcut(.upArrow, modifiers: []).disabled(model.editingTempo)
                 Button("Slower") { model.bpm -= 1 }.keyboardShortcut(.downArrow, modifiers: []).disabled(model.editingTempo)
                 Button("Faster by 10 BPM") { model.bpm += 10 }.keyboardShortcut(.rightArrow, modifiers: []).disabled(model.editingTempo)
@@ -382,116 +383,6 @@ struct InstrumentButtonStyle: ButtonStyle {
     }
 }
 
-// Inline numeric entry shares the tempo readout's size, alignment, and weight.
-@MainActor
-struct InlineTempoField: NSViewRepresentable {
-    let bpm: Int
-    let color: Color
-    let fontSize: CGFloat
-    let onSet: (Int) -> Void
-    let onCancel: () -> Void
-
-    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
-    func makeNSView(context: Context) -> NSTextField {
-        let field = TempoEntryField(string: String(bpm))
-        field.isBordered = false
-        field.isBezeled = false
-        field.drawsBackground = false
-        field.focusRingType = .none
-        field.alignment = .center
-        field.maximumNumberOfLines = 1
-        field.formatter = TempoInputFormatter()
-        field.cell?.isScrollable = true
-        field.font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .regular)
-        field.textColor = NSColor(color)
-        field.delegate = context.coordinator
-        field.setAccessibilityLabel("Tempo in beats per minute")
-        return field
-    }
-    func updateNSView(_ field: NSTextField, context: Context) {
-        context.coordinator.parent = self
-        field.font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .regular)
-        field.textColor = NSColor(color)
-        // Preserve the user's draft while playback refreshes the readout.
-    }
-
-    @MainActor
-    final class Coordinator: NSObject, NSTextFieldDelegate {
-        var parent: InlineTempoField
-        private var finished = false
-        init(parent: InlineTempoField) { self.parent = parent }
-
-        func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
-            guard let field = control as? NSTextField else { return false }
-            if selector == NSSelectorFromString("insertNewline:") {
-                finish(field, apply: true)
-                return true
-            }
-            if selector == NSSelectorFromString("cancelOperation:") {
-                finish(field, apply: false)
-                return true
-            }
-            return false
-        }
-        func controlTextDidEndEditing(_ notification: Notification) {
-            if let field = notification.object as? NSTextField { finish(field, apply: true) }
-        }
-        private func finish(_ field: NSTextField, apply: Bool) {
-            guard !finished else { return }
-            finished = true
-            let window = field.window
-            if apply, let value = Tempo.fromText(field.stringValue) {
-                parent.onSet(value)
-            } else {
-                parent.onCancel()
-            }
-            window?.makeFirstResponder(nil)
-        }
-    }
-}
-
-// Wait for a real window before requesting keyboard focus.
-@MainActor
-final class TempoEntryField: NSTextField {
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        guard window != nil else { return }
-        DispatchQueue.main.async { [weak self] in
-            guard let self, let window = self.window else { return }
-            window.makeFirstResponder(self)
-            self.selectText(nil)
-        }
-    }
-}
-
-// AppKit validates every proposed edit, including paste, before displaying it.
-// Empty text stays valid while editing so users can delete and replace a value.
-final class TempoInputFormatter: Formatter {
-    override func string(for obj: Any?) -> String? {
-        if let string = obj as? String { return string }
-        if let number = obj as? NSNumber { return number.stringValue }
-        return nil
-    }
-
-    override func getObjectValue(
-        _ obj: AutoreleasingUnsafeMutablePointer<AnyObject?>?,
-        for string: String,
-        errorDescription error: AutoreleasingUnsafeMutablePointer<NSString?>?
-    ) -> Bool {
-        guard Tempo.isValidDraft(string) else { return false }
-        obj?.pointee = string as NSString
-        return true
-    }
-
-    override func isPartialStringValid(
-        _ partialString: String,
-        newEditingString newString: AutoreleasingUnsafeMutablePointer<NSString?>?,
-        errorDescription error: AutoreleasingUnsafeMutablePointer<NSString?>?
-    ) -> Bool {
-        Tempo.isValidDraft(partialString)
-    }
-}
-
 struct DropdownChoice {
     let id: String
     let label: String
@@ -634,7 +525,7 @@ struct InstrumentView: View {
                     }
             }
             .buttonStyle(.plain)
-            .help(model.accent ? "Turn first-beat accent off" : "Turn first-beat accent on")
+            .help(model.accent ? "Turn first-beat accent off (A)" : "Turn first-beat accent on (A)")
             .accessibilityLabel("First-beat accent")
             .accessibilityValue(model.accent ? "On" : "Off")
             Button { model.toggleMute() } label: {
@@ -812,6 +703,10 @@ final class WindowModes: ObservableObject {
                 return nil
             }
             guard modifiers.isEmpty else { return event }
+            if event.charactersIgnoringModifiers?.lowercased() == "a" {
+                if !event.isARepeat { self.model?.accent.toggle() }
+                return nil
+            }
             if event.charactersIgnoringModifiers?.lowercased() == "m" {
                 if !event.isARepeat { self.model?.toggleMute() }
                 return nil
