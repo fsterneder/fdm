@@ -29,18 +29,18 @@ struct MetronomApp: App {
                 Button("Slower") { model.bpm -= 1 }.keyboardShortcut(.downArrow, modifiers: []).disabled(model.editingTempo)
                 Button("Faster by 10 BPM") { model.bpm += 10 }.keyboardShortcut(.rightArrow, modifiers: []).disabled(model.editingTempo)
                 Button("Slower by 10 BPM") { model.bpm -= 10 }.keyboardShortcut(.leftArrow, modifiers: []).disabled(model.editingTempo)
-                Button("Increase Beats") { model.adjustBeats(by: 1) }
-                    .keyboardShortcut(.upArrow, modifiers: [.shift])
-                    .disabled(windows.isWidgetMode || model.editingTempo || model.beats >= BeatPattern.maximumBeats)
-                Button("Decrease Beats") { model.adjustBeats(by: -1) }
-                    .keyboardShortcut(.downArrow, modifiers: [.shift])
-                    .disabled(windows.isWidgetMode || model.editingTempo || model.beats == 1)
                 Button("Increase Gap") { model.adjustGap(by: 1) }
-                    .keyboardShortcut(.rightArrow, modifiers: [.shift])
+                    .keyboardShortcut(.upArrow, modifiers: [.shift])
                     .disabled(windows.isWidgetMode || model.editingTempo || model.gap == GapCycle.random)
                 Button("Decrease Gap") { model.adjustGap(by: -1) }
-                    .keyboardShortcut(.leftArrow, modifiers: [.shift])
+                    .keyboardShortcut(.downArrow, modifiers: [.shift])
                     .disabled(windows.isWidgetMode || model.editingTempo || model.gap == 0)
+                Button("Next Sound") { model.adjustSound(by: 1) }
+                    .keyboardShortcut(.rightArrow, modifiers: [.shift])
+                    .disabled(windows.isWidgetMode || model.editingTempo)
+                Button("Previous Sound") { model.adjustSound(by: -1) }
+                    .keyboardShortcut(.leftArrow, modifiers: [.shift])
+                    .disabled(windows.isWidgetMode || model.editingTempo)
             }
             CommandGroup(after: .windowArrangement) {
                 Button("Toggle Widget Mode") { windows.toggle() }
@@ -170,6 +170,13 @@ final class Metronome: ObservableObject {
         let next = min(GapCycle.options.count - 1, max(0, index + delta))
         let value = GapCycle.options[next]
         if gap != value { gap = value }
+    }
+    func adjustSound(by delta: Int) {
+        let voices = ClickVoice.allCases
+        let index = voices.firstIndex(where: { $0.rawValue == sound }) ?? 0
+        let next = ((index + delta) % voices.count + voices.count) % voices.count
+        let value = voices[next].rawValue
+        if sound != value { sound = value }
     }
     func toggle() { playing ? stop() : start() }
     func toggleMute() { volume = volume > 0 ? 0 : lastAudibleVolume }
@@ -694,10 +701,10 @@ final class WindowModes: ObservableObject {
                 // Consume disabled shortcuts before menu or focus handling sees them.
                 if self.isWidgetMode && [123, 124, 125, 126].contains(event.keyCode) { return nil }
                 switch event.keyCode {
-                case 126: self.model?.adjustBeats(by: 1)
-                case 125: self.model?.adjustBeats(by: -1)
-                case 124: self.model?.adjustGap(by: 1)
-                case 123: self.model?.adjustGap(by: -1)
+                case 126: self.model?.adjustGap(by: 1)
+                case 125: self.model?.adjustGap(by: -1)
+                case 124: self.model?.adjustSound(by: 1)
+                case 123: self.model?.adjustSound(by: -1)
                 default: return event
                 }
                 return nil

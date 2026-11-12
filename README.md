@@ -22,7 +22,7 @@ open dist/fdm.app
 - **Right column:** Widget, Settings, Accent, Mute, and Start/Stop.
 - **Settings:** Beats (1–7), Gap Length (1–8 bars), Sound, Theme, volume, and Tap.
 - **Space:** Start/Stop. **T:** tap. **M:** mute. **A:** accent.
-- **↑/↓:** tempo ±1. **←/→:** tempo ±10. **Shift + ↑/↓:** beats. **Shift + ←/→:** gap. Shift shortcuts work only in the main window.
+- **↑/↓:** tempo ±1. **←/→:** tempo ±10. **Shift + ↑/↓:** gap. **Shift + ←/→:** previous/next sound. Shift shortcuts work only in the main window.
 - **Tab or &#92;:** switch to the floating widget.
 
 Completed beats stay filled. With Accent enabled, the first indicator keeps the solid Play accent, including while active; other active beats use the current-beat color. Beat-count and accent edits appear immediately; their audio changes follow the boundaries below. The widget shows read-only BPM and beat progress, with a flat expand control. The always-visible speaker button toggles mute; it shows a slash when muted. Silent gap bars keep the normal theme colors, with current and completed beats filled on the lower half, including accented beats.

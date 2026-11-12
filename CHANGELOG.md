@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.5
+
+- Remap Shift + Up/Down to increase/decrease Gap.
+- Use Shift + Left/Right for previous/next sound, wrapping through the available voices.
+- Keep Shift shortcuts disabled in widget mode and during value drags.
+
 ## 0.18.4
 
 - Remove double-click BPM typing and its inline editor; keep drag and keyboard adjustment.
